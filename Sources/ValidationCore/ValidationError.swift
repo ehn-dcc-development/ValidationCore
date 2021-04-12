@@ -15,4 +15,6 @@ public enum ValidationError : Error {
     case COSE_DESERIALIZATION_FAILED
     case CBOR_DESERIALIZATION_FAILED
     case INVALID_JSON_PAYLOAD
+    case QR_CODE_ERROR
+    case CERTIFICATE_QUERY_FAILED
 }

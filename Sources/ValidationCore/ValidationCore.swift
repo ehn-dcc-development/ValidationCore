@@ -1,13 +1,17 @@
 import base45_swift
 import CocoaLumberjackSwift
 import Gzip
-//import SwiftCBOR
 import CBORSwift
 import UIKit
 
 public struct ValidationCore {
     private let PREFIX = "AT01"
+    private let CERT_SERVICE_URL = "https://dev.a-sit.at/certservice/"
+    private let CERT_PATH = "cert/"
 
+    
+    private var completionHandler : ((Result<ValidationResult, ValidationError>) -> ())?
+    
     public init(){
         DDLog.add(DDOSLogger.sharedInstance)
     }
@@ -15,10 +19,12 @@ public struct ValidationCore {
     
     //MARK: - Public API
     
-    public func validateQrCode(_ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()){
+    public mutating func validateQrCode(_ vc : UIViewController, prompt: String = "Scan QR Code", _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()){
+        self.completionHandler = completionHandler
+        QrCodeScanner().scan(vc, prompt, self)
         //TODO scan qr code and pass to validate-method
-        let data = "AT016BFB 9W08AP2-532B16P0+IOK LDA6C:D1/JGVC*L1*UN9+5FJE49TMCIHSE*DSS+FG6U5DJQY7EJLFCHKT1NMG*$OY31N7SL 8VHQHJ8RBM$H1XW0:+4W9B/4Q+-GVTFUFVV0OCAWA:LZWMX*EYA5A.NFVN7+CXUTB/V09V5GCI3F NLGR227CBR2YSM+RI1-RZ$IDJPQUPXOO8BHJ$HDLMH94HY7XE6:LMWZVW+G5V2+9F/VDQUPZYCPZO8OG7DP8XC41RS KFTN+ ADOG1BS$OB/29NT2Z19HH44G0-BN0QO207Z%P%P3G90BX6EA7JWP-3HX.RFO3C$H- 5$AA8MA6-FALRB 32KGTJ90:6VZC16PXK0%OCE65D87W545D8QI1425ZWFMS11.N7T0-6LIJGJ+T5-CFEGRR3RPPH5SUYEXNNI/69*L-JG2YDPPL5RUEMR8 A*/2MRAW 6F0KMQBSYKQ+ABCS:X6U/KLTFFRLM%585G.OR131UB5W 4R2N30J$GFIE11P1O+V1-TEGMX9K/X9SYA+H6MX1U8WGK46-6CC9%.DO%VMIE0TO9$T3:77XFLTU HDF2SLWQQM1HPVQVKP2W39VM6J+TMT5HA2OL3OK8TGATZSEYPGG253*7L*J-IVO6R.7UYYQT8HJXL+KRM 3++N"
-        validate(encodedData: data, completionHandler)
+//        let data = "AT016BFOXNMG2N9H8154TQ0TQ6E7W%M1TQ60JO DG*OY3WH:O*F9MN2SVUGL2-E64WFJRHQJAXRQ3E25SI:TU+MM0W5RX5TU12XENQ1DG6Y8TI0AEB9Q59C/96$PE%6AOMZL6BR9FGW15G7DAGWUG+SP+P$$QSJ0G 7G+SC%O4Q5%H06J0.L8CEK6.SC/VAT4*EIWC5/HL3 4HRICUH-+J70SBL02 EYOOQRA5RU2 E7R3V$6SYC00U2LL6468UEHFE2R6GS6IPEC46G8EA7N%17W56B0F2R6I%6%96LZ6/Q6AL6//6746-G9XL9TLR5DLE6COKEACBBYIU*1SZ43I0DS9CL5A 6YO6TP63CWTSOALU.GD.YGXV1%CWOXAA1Q-WT2-P.NI1$EV0EC:31QKR6UT2W**KIFF41F6JAHUVE3E5I89ESAGT8Z0O6M$1J7X7YTA$JDM+5CAG/E7K99RWE"
+//        validate(encodedData: data, completionHandler)
     }
     
     public func validate(encodedData: String, _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()) {
@@ -44,18 +50,39 @@ public struct ValidationCore {
             completionHandler(.failure(.COSE_DESERIALIZATION_FAILED))
             return
         }
-        //get public key and validate cose
-        //get payload from cose
-        //return success
-        completionHandler(.failure(.GENERAL_ERROR))
+        queryPublicKey(with: cose.header.keyId) { cert in
+            guard let cert = cert else {
+                completionHandler(.failure(.CERTIFICATE_QUERY_FAILED))
+                return
+            }
+            
+            completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: cert), payload: cose.payload)))
+        }
     }
     
 
     //MARK: - Helper Functions
     
-    private func queryPublicKey(with keyId: String) -> String {
-        //TODO get key from certservice
-        return ""
+    private func queryPublicKey(with keyId: String, _ completionHandler: @escaping (String?)->()) {
+        guard let url = URL(string: "\(CERT_SERVICE_URL)\(CERT_PATH)\(keyId)") else { 
+            DDLogError("Cannot construct certificate query url.")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.addValue("text/plain", forHTTPHeaderField: "Accept")
+        URLSession.shared.dataTask(with: request) { body, response, error in
+            guard error == nil,
+                  let status = (response as? HTTPURLResponse)?.statusCode,
+                  200 == status,
+                  let body = body else {
+                DDLogError("Cannot query certificate.")
+                completionHandler(nil)
+                return
+            }
+            let encodedCert = String(data: body, encoding: .utf8)
+            completionHandler(encodedCert)
+        }.resume()
     }
     
     private func removeScheme(prefix: String, from encodedString: String) -> String? {
@@ -87,8 +114,10 @@ public struct ValidationCore {
             return nil
         }
         let tagValue = tag.tagValue()
+        let rawHeader = tagObjectValue[0].cborBytes
+        let rawPayload = tagObjectValue[2].cborBytes
         
-        return Cose(header: coseHeader, payload: cosePayload, signature: coseSignature)
+        return Cose(header: coseHeader, payload: cosePayload, signature: coseSignature, rawHeader: rawHeader, rawPayload: rawPayload)
     }
     
     private func decodeHeader(from object: NSObject) -> CoseHeader? {
@@ -99,12 +128,21 @@ public struct ValidationCore {
         return CoseHeader(from: CBOR.decode(headerData))
     }
     
-    private func decodePayload(from object: NSObject) -> NSObject? {
-        guard let payload = object.cborBytes else {
-            DDLogError("Cannot decode COSE payload.")
-            return nil
+}
+
+extension ValidationCore : QrCodeReceiver {
+    public func canceled() {
+        DDLogDebug("QR code scanning cancelled.")
+    }
+    
+    public func onQrCodeResult(_ result: String?) {
+        guard let result = result,
+              let completionHandler = self.completionHandler else {
+            DDLogError("Cannot read QR code.")
+            self.completionHandler?(.failure(.QR_CODE_ERROR))
+            return
         }
-        return CBOR.decode(payload) //TODO fix payload decoding
+        validate(encodedData: result, completionHandler)
     }
 }
 

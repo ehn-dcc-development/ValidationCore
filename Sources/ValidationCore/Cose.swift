@@ -6,26 +6,59 @@
 //
 
 import Foundation
+import SwiftCBOR
+import CocoaLumberjackSwift
+import CryptoKit
 
 struct Cose {
     let header : CoseHeader
     let payload : VaccinationData
     let signature : Data
-    //READABLE COSE
-            //18([<< {4: "H2RriOS8J/Y=", 1: -7} >>, {}, << {"person": {"name": {"family": "Musterfrau", "given": "Gabi"}, "birthDate": "1999-04-20", "gender": "female", "identifier": {"system": "some URI e.g. defining citizen ID", "varue": "c228f2ff"}}, "pastInfection": {"disease": "U07.1", "dateFirstPositiveTest": "2020-12-20", "countryOfTest": "AT"}, "certificateMetadata": {"issuer": "BMGSPK, Vienna, Austria", "identifier": "01ATBA712FE030C797287CB97334452966470042", "validFrom": "2021-01-20", "validUntil": "2021-07-20", "schemaVersion": "1.0.0"}} >>, h'FED92618A2C4EBEE97E8A5B73509CE27F3FA28641558A05693AC49F5C1C96F9E9182E3A125039ADFC81E4488BEAC86DDA71E88E769200B53AAF342D555C28009'])
-            
-            //Data
-            /*
-             D2                                      # tag(18)
-                84                                   # array(4)
-                   51                                # bytes(17)
-                      A2046C48325272694F53384A2F593D0126 # "\xA2\x04lH2RriOS8J/Y=\x01&"
-                   A0                                # map(0)
-                   59 0191                           # bytes(401)
-                      BF66706572736F6EBF646E616D65BF6666616D696C796A4D75737465726672617565676976656E6447616269FF696269727468446174656A313939392D30342D32306667656E6465726666656D616C656A6964656E746966696572BF6673797374656D7821736F6D652055524920652E672E20646566696E696E6720636974697A656E2049446576616C7565686332323866326666FFFF6D70617374496E66656374696F6EBF6764697365617365655530372E3175646174654669727374506F736974697665546573746A323032302D31322D32306D636F756E7472794F6654657374624154FF7363657274696669636174654D65746164617461BF6669737375657277424D4753504B2C205669656E6E612C20417573747269616A6964656E7469666965727828303141544241373132464530333043373937323837434239373333343435323936363437303034326976616C696446726F6D6A323032312D30312D32306A76616C6964556E74696C6A323032312D30372D32306D736368656D6156657273696F6E65312E302E30FFFF # "\xBFfperson\xBFdname\xBFffamilyjMusterfrauegivendGabi\xFFibirthDatej1999-04-20fgenderffemalejidentifier\xBFfsystemx!some URI e.g. defining citizen IDevaluehc228f2ff\xFF\xFFmpastInfection\xBFgdiseaseeU07.1udateFirstPositiveTestj2020-12-20mcountryOfTestbAT\xFFscertificateMetadata\xBFfissuerwBMGSPK, Vienna, Austriajidentifierx(01ATBA712FE030C797287CB97334452966470042ivalidFromj2021-01-20jvalidUntilj2021-07-20mschemaVersione1.0.0\xFF\xFF"
-                   58 40                             # bytes(64)
-                      FED92618A2C4EBEE97E8A5B73509CE27F3FA28641558A05693AC49F5C1C96F9E9182E3A125039ADFC81E4488BEAC86DDA71E88E769200B53AAF342D555C28009 # "\xFE\xD9&\x18\xA2\xC4\xEB\xEE\x97\xE8\xA5\xB75\t\xCE'\xF3\xFA(d\x15X\xA0V\x93\xACI\xF5\xC1\xC9o\x9E\x91\x82\xE3\xA1%\x03\x9A\xDF\xC8\x1ED\x88\xBE\xAC\x86\xDD\xA7\x1E\x88\xE7i \vS\xAA\xF3B\xD5U\xC2\x80\t"
+    let rawHeader : [UInt8]?
+    let rawPayload : [UInt8]?
+    
+    private var signatureStruct : Data? {
+        get {
+           /* From https://tools.ietf.org/html/rfc8152#section-4.2
+             Sig_structure = [
+                 context : "Signature" / "Signature1" / "CounterSignature",
+                 body_protected : empty_or_serialized_map,
+                 ? sign_protected : empty_or_serialized_map,
+                 external_aad : bstr,
+                 payload : bstr
+             ]
              */
+            let context = CBOR(stringLiteral: "Signature1")
+            guard let rawHeader = rawHeader,
+                  let protectedHeader = try? CBORDecoder(input: CBOR.encodeData(Data(rawHeader))).decodeItem(),
+                  let rawPayload = rawPayload,
+                  let payloadCbor = try? CBORDecoder(input: CBOR.encodeData(Data(rawPayload))).decodeItem() else {
+                return nil
+            }
+            let externalAad = CBOR.byteString([UInt8]()) /*no external application specific data*/
+            let cborArray = CBOR(arrayLiteral: context, protectedHeader, externalAad, payloadCbor)
+            return Data(cborArray.encode())
+        }
+    }
+
+    //Only supporting ES256 signatures for the moment
+    func hasValidSignature(for encodedCert: String) -> Bool {
+        guard let signedData = signatureStruct,
+              let encodedCertData = Data(base64Encoded: encodedCert),
+              let cert = SecCertificateCreateWithData(nil, encodedCertData as CFData),
+              let extractedKey = SecCertificateCopyKey(cert) else {
+            DDLogError("Cannot decode certificate.")
+            return false
+        }
+
+        let asn1Signature = Asn1Encoder().convertRawSignatureIntoAsn1(signature)
+        var error : Unmanaged<CFError>?
+        let result = SecKeyVerifySignature(extractedKey, .ecdsaSignatureMessageX962SHA256, signedData as CFData, asn1Signature as CFData, &error)
+        if let error = error {
+            DDLogError("Signature verification error: \(error)")
+        }
+        return result
+    }
 }
 
 struct CoseHeader {
@@ -52,39 +85,63 @@ struct CoseHeader {
 
 
 
-struct VaccinationData : Decodable {
+struct VaccinationData {
     var person: Person?
     var vaccinations: [Vaccination]?
     var pastInfection: PastInfection?
     var test: Test?
     var certificateMetadata: CertificateMetadata?
+    
+    init(from cbor: CBOR) {
+        person = Person(from: cbor["sub"])
+        
+        if let cborVaccinations = cbor["vac"]?.unwrap() as? [CBOR] {
+            vaccinations = cborVaccinations.compactMap { Vaccination(from: $0) }
+        }
+        pastInfection = PastInfection(from: cbor["rec"])
+        test = Test(from: cbor["tst"])
+        certificateMetadata = CertificateMetadata(from: cbor["cert"])
+    }
 }
 
-struct Person : Decodable {
-    var name: Name?
+struct Person {
+    var name: String?
     var birthDate: String?
-    var gender: String?
-    var identifier: Identifier?
+    var identifier: [Identifier?]?
+    
+    init?(from cbor: CBOR?) {
+        guard let cbor = cbor else {
+            return nil
+        }
+        name = cbor["n"]?.unwrap() as? String
+        birthDate = cbor["dob"]?.unwrap() as? String
+        if let cborIds = cbor["id"]?.unwrap() as? [CBOR]{
+            identifier = cborIds.compactMap { Identifier(from: $0) }
+        }
+    }
 }
 
-struct Identifier : Decodable {
+struct Identifier {
     var system: String?
     var value: String?
+    
+    init?(from cbor: CBOR?) {
+        guard let cbor = cbor else {
+            return nil
+        }
+        system = cbor["t"]?.unwrap() as? String
+        value = cbor["i"]?.unwrap() as? String
+    }
 }
 
-struct Name : Decodable {
-    var family: String?
-    var given: String?
-}
-
-struct Vaccination : Decodable {
+struct Vaccination {
     var disease: String?
     var vaccine: String?
     var medicinialProduct: String?
     var marketingAuthorizationHolder: String?
     var manufacturer: String?
-    var number: Int?
-    var numberOf: Int?
+    var number: UInt64?
+    var numberOf: UInt64?
     var lotNumber: String?
     var batch: String?
     var vaccinationDate: String?
@@ -93,15 +150,40 @@ struct Vaccination : Decodable {
     var healthprofessionaIdentification: String?
     var countryOfVaccination: String?
     var country: String?
+    
+    init?(from cbor: CBOR?) {
+        guard let cbor = cbor else {
+            return nil
+        }
+        disease = cbor["dis"]?.unwrap() as? String
+        vaccine = cbor["des"]?.unwrap() as? String
+        medicinialProduct = cbor["nam"]?.unwrap() as? String
+        marketingAuthorizationHolder = cbor["aut"]?.unwrap() as? String
+        number = cbor["seq"]?.unwrap() as? UInt64
+        numberOf = cbor["tot"]?.unwrap() as? UInt64
+        lotNumber = cbor["lot"]?.unwrap() as? String
+        vaccinationDate = cbor["dat"]?.unwrap() as? String
+        administeringCentre = cbor["adm"]?.unwrap() as? String
+        country = cbor["cou"]?.unwrap() as? String
+    }
 }
 
-struct PastInfection : Decodable {
+struct PastInfection {
     var disease: String?
     var dateFirstPositiveTest: String?
     var countryOfTest: String?
+    
+    init?(from cbor: CBOR?) {
+        guard let cbor = cbor else {
+            return nil
+        }
+        disease = cbor["dis"]?.unwrap() as? String
+        countryOfTest = cbor["cou"]?.unwrap() as? String
+        dateFirstPositiveTest = cbor["dat"]?.unwrap() as? String
+    }
 }
 
-struct CertificateMetadata : Decodable {
+struct CertificateMetadata {
     var issuer: String?
     var identifier: String?
     var validFrom: String?
@@ -109,6 +191,21 @@ struct CertificateMetadata : Decodable {
     var validUntilextended: String?
     var revokelistidentifier: String?
     var schemaVersion: String?
+    var country: String?
+    
+    init?(from cbor: CBOR?) {
+        guard let cbor = cbor else {
+            return nil
+        }
+        identifier = cbor["id"]?.unwrap() as? String
+        issuer = cbor["is"]?.unwrap() as? String
+        validFrom = cbor["vf"]?.unwrap() as? String
+        schemaVersion = cbor["vr"]?.unwrap() as? String
+        validUntil = cbor["vu"]?.unwrap() as? String
+        validUntilextended = cbor["validUntilextended"]?.unwrap() as? String
+        revokelistidentifier = cbor["revokelistidentifier"]?.unwrap() as? String
+        country = cbor["co"]?.unwrap() as? String
+    }
 }
 
 struct Test : Decodable {
@@ -124,4 +221,53 @@ struct Test : Decodable {
     var facilityAddress: String?
     var healthprofessionaIdentification: String?
     var country: String?
+    
+    init?(from cbor: CBOR?) {
+        guard let cbor = cbor else {
+            return nil
+        }
+        disease = cbor["dis"]?.unwrap() as? String
+        type = cbor["typ"]?.unwrap() as? String
+        name = cbor["tna"]?.unwrap() as? String
+        manufacturer = cbor["tma"]?.unwrap() as? String
+        sampleOrigin = cbor["ori"]?.unwrap() as? String
+        timeStampSample = cbor["dat"]?.unwrap() as? String
+        result = cbor["res"]?.unwrap() as? String
+        facility = cbor["fac"]?.unwrap() as? String
+    }
+}
+
+
+extension ValidationCore {
+    func decodePayload(from object: NSObject) -> VaccinationData? {
+        guard let payload = object.cborBytes,
+              let decodedPayload = try? CBORDecoder(input: payload).decodeItem() else {
+            DDLogError("Cannot decode COSE payload.")
+            return nil
+        }
+        
+        return VaccinationData(from: decodedPayload)
+    }
+}
+
+extension CBOR {
+    func unwrap() -> Any? {
+        switch self {
+        case .simple(let value): return value
+        case .boolean(let value): return value
+        case .byteString(let value): return value
+        case .date(let value): return value
+        case .double(let value): return value
+        case .float(let value): return value
+        case .half(let value): return value
+        case .tagged(let tag, let cbor): return cbor  //TODO expand lib for COSE Sign1 and Sign tags and replace CBORSwift
+        case .array(let array): return array
+        case .map(let map): return map
+        case .utf8String(let value): return value
+        case .unsignedInt(let value): return value
+        case .negativeInt(let value): return value
+        default:
+            return nil
+        }
+    }
 }
