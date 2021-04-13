@@ -85,29 +85,27 @@ struct CoseHeader {
 
 
 
-struct VaccinationData {
-    var person: Person?
-    var vaccinations: [Vaccination]?
-    var pastInfection: PastInfection?
-    var test: Test?
-    var certificateMetadata: CertificateMetadata?
+public struct VaccinationData {
+    public let person: Person?
+    public let vaccinations: [Vaccination]?
+    public let pastInfection: PastInfection?
+    public let test: Test?
+    public let certificateMetadata: CertificateMetadata?
+    
     
     init(from cbor: CBOR) {
         person = Person(from: cbor["sub"])
-        
-        if let cborVaccinations = cbor["vac"]?.unwrap() as? [CBOR] {
-            vaccinations = cborVaccinations.compactMap { Vaccination(from: $0) }
-        }
+        vaccinations = (cbor["vac"]?.unwrap() as? [CBOR])?.compactMap { Vaccination(from: $0) } ?? nil
         pastInfection = PastInfection(from: cbor["rec"])
         test = Test(from: cbor["tst"])
         certificateMetadata = CertificateMetadata(from: cbor["cert"])
     }
 }
 
-struct Person {
-    var name: String?
-    var birthDate: String?
-    var identifier: [Identifier?]?
+public struct Person {
+    public let name: String?
+    public let birthDate: String?
+    public let identifier: [Identifier?]?
     
     init?(from cbor: CBOR?) {
         guard let cbor = cbor else {
@@ -115,15 +113,13 @@ struct Person {
         }
         name = cbor["n"]?.unwrap() as? String
         birthDate = cbor["dob"]?.unwrap() as? String
-        if let cborIds = cbor["id"]?.unwrap() as? [CBOR]{
-            identifier = cborIds.compactMap { Identifier(from: $0) }
-        }
+        identifier = (cbor["id"]?.unwrap() as? [CBOR])?.compactMap { Identifier(from: $0) } ?? nil
     }
 }
 
-struct Identifier {
-    var system: String?
-    var value: String?
+public struct Identifier {
+    public let system: String?
+    public let value: String?
     
     init?(from cbor: CBOR?) {
         guard let cbor = cbor else {
@@ -134,22 +130,17 @@ struct Identifier {
     }
 }
 
-struct Vaccination {
-    var disease: String?
-    var vaccine: String?
-    var medicinialProduct: String?
-    var marketingAuthorizationHolder: String?
-    var manufacturer: String?
-    var number: UInt64?
-    var numberOf: UInt64?
-    var lotNumber: String?
-    var batch: String?
-    var vaccinationDate: String?
-    var nextVaccinationDate: String?
-    var administeringCentre: String?
-    var healthprofessionaIdentification: String?
-    var countryOfVaccination: String?
-    var country: String?
+public struct Vaccination {
+    public let disease: String?
+    public let vaccine: String?
+    public let medicinialProduct: String?
+    public let marketingAuthorizationHolder: String?
+    public let number: UInt64?
+    public let numberOf: UInt64?
+    public let lotNumber: String?
+    public let vaccinationDate: String?
+    public let administeringCentre: String?
+    public let country: String?
     
     init?(from cbor: CBOR?) {
         guard let cbor = cbor else {
@@ -168,10 +159,10 @@ struct Vaccination {
     }
 }
 
-struct PastInfection {
-    var disease: String?
-    var dateFirstPositiveTest: String?
-    var countryOfTest: String?
+public struct PastInfection {
+    public let disease: String?
+    public let dateFirstPositiveTest: String?
+    public let countryOfTest: String?
     
     init?(from cbor: CBOR?) {
         guard let cbor = cbor else {
@@ -183,15 +174,15 @@ struct PastInfection {
     }
 }
 
-struct CertificateMetadata {
-    var issuer: String?
-    var identifier: String?
-    var validFrom: String?
-    var validUntil: String?
-    var validUntilextended: String?
-    var revokelistidentifier: String?
-    var schemaVersion: String?
-    var country: String?
+public struct CertificateMetadata {
+    public let issuer: String?
+    public let identifier: String?
+    public let validFrom: String?
+    public let validUntil: String?
+    public let validUntilextended: String?
+    public let revokelistidentifier: String?
+    public let schemaVersion: String?
+    public let country: String?
     
     init?(from cbor: CBOR?) {
         guard let cbor = cbor else {
@@ -208,20 +199,16 @@ struct CertificateMetadata {
     }
 }
 
-struct Test : Decodable {
-    var disease: String?
-    var type: String?
-    var name: String?
-    var manufacturer: String?
-    var sampleOrigin: String?
-    var timeStampSample: String?
-    var timeStampResult: String?
-    var result: String?
-    var facility: String?
-    var facilityAddress: String?
-    var healthprofessionaIdentification: String?
-    var country: String?
-    
+public struct Test : Decodable {
+    public let disease: String?
+    public let type: String?
+    public let name: String?
+    public let manufacturer: String?
+    public let sampleOrigin: String?
+    public let timeStampSample: String?
+    public let result: String?
+    public let facility: String?
+
     init?(from cbor: CBOR?) {
         guard let cbor = cbor else {
             return nil

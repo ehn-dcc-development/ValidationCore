@@ -11,6 +11,7 @@ public struct ValidationCore {
 
     
     private var completionHandler : ((Result<ValidationResult, ValidationError>) -> ())?
+    private var scanner : QrCodeScanner?
     
     public init(){
         DDLog.add(DDOSLogger.sharedInstance)
@@ -21,10 +22,8 @@ public struct ValidationCore {
     
     public mutating func validateQrCode(_ vc : UIViewController, prompt: String = "Scan QR Code", _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()){
         self.completionHandler = completionHandler
-        QrCodeScanner().scan(vc, prompt, self)
-        //TODO scan qr code and pass to validate-method
-//        let data = "AT016BFOXNMG2N9H8154TQ0TQ6E7W%M1TQ60JO DG*OY3WH:O*F9MN2SVUGL2-E64WFJRHQJAXRQ3E25SI:TU+MM0W5RX5TU12XENQ1DG6Y8TI0AEB9Q59C/96$PE%6AOMZL6BR9FGW15G7DAGWUG+SP+P$$QSJ0G 7G+SC%O4Q5%H06J0.L8CEK6.SC/VAT4*EIWC5/HL3 4HRICUH-+J70SBL02 EYOOQRA5RU2 E7R3V$6SYC00U2LL6468UEHFE2R6GS6IPEC46G8EA7N%17W56B0F2R6I%6%96LZ6/Q6AL6//6746-G9XL9TLR5DLE6COKEACBBYIU*1SZ43I0DS9CL5A 6YO6TP63CWTSOALU.GD.YGXV1%CWOXAA1Q-WT2-P.NI1$EV0EC:31QKR6UT2W**KIFF41F6JAHUVE3E5I89ESAGT8Z0O6M$1J7X7YTA$JDM+5CAG/E7K99RWE"
-//        validate(encodedData: data, completionHandler)
+        self.scanner = QrCodeScanner()
+        scanner?.scan(vc, prompt, self)
     }
     
     public func validate(encodedData: String, _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()) {
@@ -101,8 +100,7 @@ public struct ValidationCore {
         //GZip uses ZLib internally
         return try? encodedData.gunzipped()
     }
-    //Private: Scan QR Code (-> QR Code Helper from eID)
-    
+
     private func cose(from data: Data) -> Cose? {
         let decoded = CBOR.decode(data.bytes)
         guard let tag = decoded as? NSTag,
@@ -113,7 +111,6 @@ public struct ValidationCore {
               else {
             return nil
         }
-        let tagValue = tag.tagValue()
         let rawHeader = tagObjectValue[0].cborBytes
         let rawPayload = tagObjectValue[2].cborBytes
         

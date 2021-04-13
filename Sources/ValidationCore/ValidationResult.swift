@@ -8,6 +8,6 @@
 import Foundation
 
 public struct ValidationResult {
-    let isValid : Bool
-    let payload : VaccinationData
+    public let isValid : Bool
+    public let payload : VaccinationData
 }
