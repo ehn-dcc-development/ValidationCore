@@ -12,10 +12,10 @@ import CryptoKit
 
 struct Cose {
     let header : CoseHeader
-    let payload : VaccinationData
+    let payload : CWT
     let signature : Data
-    let rawHeader : [UInt8]?
-    let rawPayload : [UInt8]?
+    let rawHeader : [UInt8]? //TODO make private, use for constructing data type
+    let rawPayload : [UInt8]? //TODO make private, represents cwt
     
     private var signatureStruct : Data? {
         get {
@@ -65,6 +65,45 @@ struct Cose {
     }
 }
 
+struct CWT {
+//    let header : CoseHeader
+    let payload : CBOR
+    let iss : String?
+    let exp : UInt64?
+    let iat : UInt64?
+    let euHealthCert : EuHealthCert
+    
+    enum PayloadKeys : Int {
+        case iss = 1
+        case iat = 6
+        case exp = 4
+        case hcert = 99
+        
+        enum HcertKeys : Int {
+            case euHealthCertV1 = 1
+        }
+        
+        func toCbor() -> CBOR {
+            return CBOR(integerLiteral: self.rawValue)
+        }
+    }
+
+    init?(from cbor: CBOR) {
+        payload = cbor
+        iss = cbor[PayloadKeys.iss.toCbor()]?.asString()
+        exp = cbor[PayloadKeys.exp.toCbor()]?.asUInt64()
+        iat = cbor[PayloadKeys.iat.toCbor()]?.asUInt64()
+        guard let encodedMap = cbor[PayloadKeys.hcert.toCbor()]?.encode(),
+              let hCertMap = try? CBORDecoder(input: encodedMap).decodeItem(),
+              let dataBytes = hCertMap[CBOR(integerLiteral: PayloadKeys.HcertKeys.euHealthCertV1.rawValue)]?.asBytes(),
+              let certData = try? CBORDecoder(input: dataBytes).decodeItem() else {
+            return nil
+        }
+        
+        euHealthCert = EuHealthCert(from: certData)
+    }
+}
+
 struct CoseHeader {
     var keyId : String
     var algorithm : Int
@@ -89,7 +128,7 @@ struct CoseHeader {
 
 
 
-public struct VaccinationData {
+public struct EuHealthCert {
     public let person: Person?
     public let vaccinations: [Vaccination]?
     public let pastInfections: [PastInfection]?
@@ -99,15 +138,16 @@ public struct VaccinationData {
     
     init(from cbor: CBOR) {
         person = Person(from: cbor["sub"])
-        vaccinations = (cbor["vac"]?.unwrap() as? [CBOR])?.compactMap { Vaccination(from: $0) } ?? nil
-        pastInfections = (cbor["rec"]?.unwrap() as? [CBOR])?.compactMap { PastInfection(from: $0) } ?? nil
-        tests = (cbor["tst"]?.unwrap() as? [CBOR])?.compactMap { Test(from: $0) } ?? nil
+        vaccinations = (cbor["vac"]?.asList())?.compactMap { Vaccination(from: $0) } ?? nil
+        pastInfections = (cbor["rec"]?.asList())?.compactMap { PastInfection(from: $0) } ?? nil
+        tests = (cbor["tst"]?.asList())?.compactMap { Test(from: $0) } ?? nil
         certificateMetadata = CertificateMetadata(from: cbor["cert"])
     }
 }
 
 public struct Person {
-    public let name: String?
+    public let givenName: String?
+    public let familyName: String?
     public let birthDate: String?
     public let identifier: [Identifier?]?
     
@@ -115,9 +155,10 @@ public struct Person {
         guard let cbor = cbor else {
             return nil
         }
-        name = cbor["n"]?.unwrap() as? String
-        birthDate = cbor["dob"]?.unwrap() as? String
-        identifier = (cbor["id"]?.unwrap() as? [CBOR])?.compactMap { Identifier(from: $0) } ?? nil
+        givenName = cbor["gn"]?.asString()
+        familyName = cbor["fn"]?.asString()
+        birthDate = cbor["dob"]?.asString()
+        identifier = (cbor["id"]?.asList())?.compactMap { Identifier(from: $0) } ?? nil
     }
 }
 
@@ -129,8 +170,8 @@ public struct Identifier {
         guard let cbor = cbor else {
             return nil
         }
-        system = cbor["t"]?.unwrap() as? String
-        value = cbor["i"]?.unwrap() as? String
+        system = cbor["t"]?.asString()
+        value = cbor["i"]?.asString()
     }
 }
 
@@ -150,16 +191,16 @@ public struct Vaccination {
         guard let cbor = cbor else {
             return nil
         }
-        disease = cbor["dis"]?.unwrap() as? String
-        vaccine = cbor["des"]?.unwrap() as? String
-        medicinialProduct = cbor["nam"]?.unwrap() as? String
-        marketingAuthorizationHolder = cbor["aut"]?.unwrap() as? String
-        number = cbor["seq"]?.unwrap() as? UInt64
-        numberOf = cbor["tot"]?.unwrap() as? UInt64
-        lotNumber = cbor["lot"]?.unwrap() as? String
-        vaccinationDate = cbor["dat"]?.unwrap() as? String
-        administeringCentre = cbor["adm"]?.unwrap() as? String
-        country = cbor["cou"]?.unwrap() as? String
+        disease = cbor["dis"]?.asString()
+        vaccine = cbor["vap"]?.asString()
+        medicinialProduct = cbor["mep"]?.asString()
+        marketingAuthorizationHolder = cbor["aut"]?.asString()
+        number = cbor["seq"]?.asUInt64()
+        numberOf = cbor["tot"]?.asUInt64()
+        lotNumber = cbor["lot"]?.asString()
+        vaccinationDate = cbor["dat"]?.asString()
+        administeringCentre = cbor["adm"]?.asString()
+        country = cbor["cou"]?.asString()
     }
 }
 
@@ -172,9 +213,9 @@ public struct PastInfection {
         guard let cbor = cbor else {
             return nil
         }
-        disease = cbor["dis"]?.unwrap() as? String
-        countryOfTest = cbor["cou"]?.unwrap() as? String
-        dateFirstPositiveTest = cbor["dat"]?.unwrap() as? String
+        disease = cbor["dis"]?.asString()
+        countryOfTest = cbor["cou"]?.asString()
+        dateFirstPositiveTest = cbor["dat"]?.asString()
     }
 }
 
@@ -192,14 +233,14 @@ public struct CertificateMetadata {
         guard let cbor = cbor else {
             return nil
         }
-        identifier = cbor["id"]?.unwrap() as? String
-        issuer = cbor["is"]?.unwrap() as? String
-        validFrom = cbor["vf"]?.unwrap() as? String
-        schemaVersion = cbor["vr"]?.unwrap() as? String
-        validUntil = cbor["vu"]?.unwrap() as? String
-        validUntilextended = cbor["validUntilextended"]?.unwrap() as? String
-        revokelistidentifier = cbor["revokelistidentifier"]?.unwrap() as? String
-        country = cbor["co"]?.unwrap() as? String
+        identifier = cbor["id"]?.asString()
+        issuer = cbor["is"]?.asString()
+        validFrom = cbor["vf"]?.asString()
+        schemaVersion = cbor["vr"]?.asString()
+        validUntil = cbor["vu"]?.asString()
+        validUntilextended = cbor["validUntilextended"]?.asString()
+        revokelistidentifier = cbor["revokelistidentifier"]?.asString()
+        country = cbor["co"]?.asString()
     }
 }
 
@@ -209,35 +250,39 @@ public struct Test : Decodable {
     public let name: String?
     public let manufacturer: String?
     public let sampleOrigin: String?
-    public let timeStampSample: String?
+    public let timestampSample: String?
+    public let timestampResult : String?
     public let result: String?
     public let facility: String?
+    public let country: String?
 
     init?(from cbor: CBOR?) {
         guard let cbor = cbor else {
             return nil
         }
-        disease = cbor["dis"]?.unwrap() as? String
-        type = cbor["typ"]?.unwrap() as? String
-        name = cbor["tna"]?.unwrap() as? String
-        manufacturer = cbor["tma"]?.unwrap() as? String
-        sampleOrigin = cbor["ori"]?.unwrap() as? String
-        timeStampSample = cbor["dat"]?.unwrap() as? String
-        result = cbor["res"]?.unwrap() as? String
-        facility = cbor["fac"]?.unwrap() as? String
+        disease = cbor["dis"]?.asString()
+        type = cbor["typ"]?.asString()
+        name = cbor["tna"]?.asString()
+        manufacturer = cbor["tma"]?.asString()
+        sampleOrigin = cbor["ori"]?.asString()
+        timestampSample = cbor["dts"]?.asString()
+        timestampResult = cbor["dtr"]?.asString() 
+        result = cbor["res"]?.asString()
+        facility = cbor["fac"]?.asString()
+        country = cbor["cou"]?.asString()
     }
 }
 
 
 extension ValidationCore {
-    func decodePayload(from object: NSObject) -> VaccinationData? {
+    func decodePayload(from object: NSObject) -> CWT? {
         guard let payload = object.cborBytes,
               let decodedPayload = try? CBORDecoder(input: payload).decodeItem() else {
             DDLogError("Cannot decode COSE payload.")
             return nil
         }
-        
-        return VaccinationData(from: decodedPayload)
+        let cwt = CWT(from: decodedPayload)
+        return cwt //VaccinationData(from: decodedPayload)
     }
 }
 
@@ -260,5 +305,25 @@ extension CBOR {
         default:
             return nil
         }
+    }
+    
+    func asUInt64() -> UInt64? {
+        return self.unwrap() as? UInt64
+    }
+    
+    func asString() -> String? {
+        return self.unwrap() as? String
+    }
+    
+    func asList() -> [CBOR]? {
+        return self.unwrap() as? [CBOR]
+    }
+    
+    func asMap() -> [CBOR:CBOR]? {
+        return self.unwrap() as? [CBOR:CBOR]
+    }
+    
+    func asBytes() -> [UInt8]? {
+        return self.unwrap() as? [UInt8]
     }
 }

@@ -50,7 +50,7 @@ public struct ValidationCore {
             return
         }
         queryPublicKey(with: cose.header.keyId) { cert in
-            completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: cert), payload: cose.payload)))
+            completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: cert), payload: cose.payload.euHealthCert)))
         }
     }
     
@@ -101,7 +101,7 @@ public struct ValidationCore {
         guard let tag = decoded as? NSTag,
               let tagObjectValue = tag.objectValue() as? [NSObject],
               let coseHeader = decodeHeader(from: tagObjectValue[0]),
-              let cosePayload = decodePayload(from: tagObjectValue[2]),
+              let cwt = decodePayload(from: tagObjectValue[2]),
               let coseSignature = (tagObjectValue[3] as? String)?.data
               else {
             return nil
@@ -109,7 +109,8 @@ public struct ValidationCore {
         let rawHeader = tagObjectValue[0].cborBytes
         let rawPayload = tagObjectValue[2].cborBytes
         
-        return Cose(header: coseHeader, payload: cosePayload, signature: coseSignature, rawHeader: rawHeader, rawPayload: rawPayload)
+//        let vaccinationData = EuHealthCert(from: cwt.payload)
+        return Cose(header: coseHeader, payload: cwt, signature: coseSignature, rawHeader: rawHeader, rawPayload: rawPayload)
     }
     
     private func decodeHeader(from object: NSObject) -> CoseHeader? {

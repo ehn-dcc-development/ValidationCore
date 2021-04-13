@@ -9,5 +9,5 @@ import Foundation
 
 public struct ValidationResult {
     public let isValid : Bool
-    public let payload : VaccinationData
+    public let payload : EuHealthCert
 }
