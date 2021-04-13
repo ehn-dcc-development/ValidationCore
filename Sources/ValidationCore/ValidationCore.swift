@@ -50,11 +50,6 @@ public struct ValidationCore {
             return
         }
         queryPublicKey(with: cose.header.keyId) { cert in
-            guard let cert = cert else {
-                completionHandler(.failure(.CERTIFICATE_QUERY_FAILED))
-                return
-            }
-            
             completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: cert), payload: cose.payload)))
         }
     }

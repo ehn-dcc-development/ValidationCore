@@ -42,7 +42,11 @@ struct Cose {
     }
 
     //Only supporting ES256 signatures for the moment
-    func hasValidSignature(for encodedCert: String) -> Bool {
+    func hasValidSignature(for encodedCert: String?) -> Bool {
+        guard let encodedCert = encodedCert else {
+            DDLogError("No certificate, assuming COSE is not valid.")
+            return false
+        }
         guard let signedData = signatureStruct,
               let encodedCertData = Data(base64Encoded: encodedCert),
               let cert = SecCertificateCreateWithData(nil, encodedCertData as CFData),
@@ -88,16 +92,16 @@ struct CoseHeader {
 public struct VaccinationData {
     public let person: Person?
     public let vaccinations: [Vaccination]?
-    public let pastInfection: PastInfection?
-    public let test: Test?
+    public let pastInfections: [PastInfection]?
+    public let tests: [Test]?
     public let certificateMetadata: CertificateMetadata?
     
     
     init(from cbor: CBOR) {
         person = Person(from: cbor["sub"])
         vaccinations = (cbor["vac"]?.unwrap() as? [CBOR])?.compactMap { Vaccination(from: $0) } ?? nil
-        pastInfection = PastInfection(from: cbor["rec"])
-        test = Test(from: cbor["tst"])
+        pastInfections = (cbor["rec"]?.unwrap() as? [CBOR])?.compactMap { PastInfection(from: $0) } ?? nil
+        tests = (cbor["tst"]?.unwrap() as? [CBOR])?.compactMap { Test(from: $0) } ?? nil
         certificateMetadata = CertificateMetadata(from: cbor["cert"])
     }
 }
