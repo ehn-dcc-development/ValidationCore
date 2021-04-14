@@ -71,3 +71,13 @@ extension CBOR.Tag {
     public static let coseSign1Item = CBOR.Tag(rawValue: 18)
 }
 
+
+extension Dictionary where Key == CBOR {
+    subscript<Index: RawRepresentable>(index: Index) -> Value? where Index.RawValue == String {
+        return self[CBOR(stringLiteral: index.rawValue)]
+    }
+    
+    subscript<Index: RawRepresentable>(index: Index) -> Value? where Index.RawValue == Int {
+        return self[CBOR(integerLiteral: index.rawValue)]
+    }
+}

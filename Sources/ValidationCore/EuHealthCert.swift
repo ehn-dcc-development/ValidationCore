@@ -46,12 +46,17 @@ public struct Identifier {
     public let system: String?
     public let value: String?
     
+    private enum Keys : String {
+        case system = "t"
+        case value = "i"
+    }
+    
     init?(from cbor: CBOR?) {
-        guard let cbor = cbor else {
+        guard let cbor = cbor?.asMap() else {
             return nil
         }
-        system = cbor["t"]?.asString()
-        value = cbor["i"]?.asString()
+        system = cbor[Keys.system]?.asString()
+        value = cbor[Keys.value]?.asString()
     }
 }
 
@@ -64,23 +69,36 @@ public struct Vaccination {
     public let numberOf: UInt64?
     public let lotNumber: String?
     public let vaccinationDate: String?
-    public let administeringCentre: String?
+    public let administeringCenter: String?
     public let country: String?
     
+    private enum Keys : String {
+           case disease = "dis"
+           case vaccine = "vap"
+           case medicinialProduct = "mep"
+           case marketingAuthorizationHolder = "aut"
+           case number = "seq"
+           case numberOf = "tot"
+           case lotNumber = "lot"
+           case vaccinationDate = "dat"
+           case administeringCenter = "adm"
+           case country = "cou"
+    }
+       
     init?(from cbor: CBOR?) {
-        guard let cbor = cbor else {
+        guard let cbor = cbor?.asMap() else {
             return nil
         }
-        disease = cbor["dis"]?.asString()
-        vaccine = cbor["vap"]?.asString()
-        medicinialProduct = cbor["mep"]?.asString()
-        marketingAuthorizationHolder = cbor["aut"]?.asString()
-        number = cbor["seq"]?.asUInt64()
-        numberOf = cbor["tot"]?.asUInt64()
-        lotNumber = cbor["lot"]?.asString()
-        vaccinationDate = cbor["dat"]?.asString()
-        administeringCentre = cbor["adm"]?.asString()
-        country = cbor["cou"]?.asString()
+        disease = cbor[Keys.disease]?.asString()
+        vaccine = cbor[Keys.vaccine]?.asString()
+        medicinialProduct = cbor[Keys.medicinialProduct]?.asString()
+        marketingAuthorizationHolder = cbor[Keys.marketingAuthorizationHolder]?.asString()
+        number = cbor[Keys.number]?.asUInt64()
+        numberOf = cbor[Keys.numberOf]?.asUInt64()
+        lotNumber = cbor[Keys.lotNumber]?.asString()
+        vaccinationDate = cbor[Keys.vaccinationDate]?.asString()
+        administeringCenter = cbor[Keys.administeringCenter]?.asString()
+        country = cbor[Keys.country]?.asString()
     }
 }
 
@@ -89,13 +107,19 @@ public struct PastInfection {
     public let dateFirstPositiveTest: String?
     public let countryOfTest: String?
     
+    private enum Keys : String {
+        case disease = "dis"
+        case dateFirstPositiveTest = "dat"
+        case countryOfTest = "cou"
+    }
+    
     init?(from cbor: CBOR?) {
-        guard let cbor = cbor else {
+        guard let cbor = cbor?.asMap() else {
             return nil
         }
-        disease = cbor["dis"]?.asString()
-        countryOfTest = cbor["cou"]?.asString()
-        dateFirstPositiveTest = cbor["dat"]?.asString()
+        disease = cbor[Keys.disease]?.asString()
+        countryOfTest = cbor[Keys.countryOfTest]?.asString()
+        dateFirstPositiveTest = cbor[Keys.dateFirstPositiveTest]?.asString()
     }
 }
 
@@ -109,18 +133,29 @@ public struct CertificateMetadata {
     public let schemaVersion: String?
     public let country: String?
     
+    private enum Keys : String {
+        case identifier = "id"
+        case issuer = "is"
+        case validFrom = "vf"
+        case schemaVersion = "vr"
+        case validUntil = "vu"
+        case validUntilExtended = "validUntilextended"
+        case revokeListIdentifier = "revokelistidentifier"
+        case country = "co"
+    }
+    
     init?(from cbor: CBOR?) {
-        guard let cbor = cbor else {
+        guard let cbor = cbor?.asMap() else {
             return nil
         }
-        identifier = cbor["id"]?.asString()
-        issuer = cbor["is"]?.asString()
-        validFrom = cbor["vf"]?.asString()
-        schemaVersion = cbor["vr"]?.asString()
-        validUntil = cbor["vu"]?.asString()
-        validUntilextended = cbor["validUntilextended"]?.asString()
-        revokelistidentifier = cbor["revokelistidentifier"]?.asString()
-        country = cbor["co"]?.asString()
+        identifier = cbor[Keys.identifier]?.asString()
+        issuer = cbor[Keys.issuer]?.asString()
+        validFrom = cbor[Keys.validFrom]?.asString()
+        schemaVersion = cbor[Keys.schemaVersion]?.asString()
+        validUntil = cbor[Keys.validUntil]?.asString()
+        validUntilextended = cbor[Keys.validUntilExtended]?.asString()
+        revokelistidentifier = cbor[Keys.revokeListIdentifier]?.asString()
+        country = cbor[Keys.country]?.asString()
     }
 }
 
@@ -136,20 +171,33 @@ public struct Test : Decodable {
     public let facility: String?
     public let country: String?
 
+    private enum Keys : String {
+        case disease = "dis"
+        case type = "typ"
+        case name = "tna"
+        case manufacturer = "tma"
+        case sampleOrigin = "ori"
+        case timestampSample = "dts"
+        case timestampResult = "dtr"
+        case result = "res"
+        case facility = "fac"
+        case country = "cou"
+    }
+    
     init?(from cbor: CBOR?) {
-        guard let cbor = cbor else {
+        guard let cbor = cbor?.asMap() else {
             return nil
         }
-        disease = cbor["dis"]?.asString()
-        type = cbor["typ"]?.asString()
-        name = cbor["tna"]?.asString()
-        manufacturer = cbor["tma"]?.asString()
-        sampleOrigin = cbor["ori"]?.asString()
-        timestampSample = cbor["dts"]?.asString()
-        timestampResult = cbor["dtr"]?.asString()
-        result = cbor["res"]?.asString()
-        facility = cbor["fac"]?.asString()
-        country = cbor["cou"]?.asString()
+        disease = cbor[Keys.disease]?.asString()
+        type = cbor[Keys.type]?.asString()
+        name = cbor[Keys.name]?.asString()
+        manufacturer = cbor[Keys.manufacturer]?.asString()
+        sampleOrigin = cbor[Keys.sampleOrigin]?.asString()
+        timestampSample = cbor[Keys.timestampSample]?.asString()
+        timestampResult = cbor[Keys.timestampResult]?.asString()
+        result = cbor[Keys.result]?.asString()
+        facility = cbor[Keys.facility]?.asString()
+        country = cbor[Keys.country]?.asString()
     }
 }
 

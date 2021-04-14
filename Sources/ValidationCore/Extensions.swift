@@ -12,3 +12,9 @@ extension Data{
     return self.map { String(format: "%02x ", $0) }.joined()
  }
 }
+
+extension Data {
+    public var bytes : [UInt8] {
+        return [UInt8](self)
+    }
+}

@@ -8,7 +8,7 @@
 import Foundation
 import SwiftCBOR
 import CocoaLumberjackSwift
-import CryptoKit
+import Security
 
 struct Cose {
     let header : CoseHeader
@@ -17,15 +17,7 @@ struct Cose {
 
     private var signatureStruct : Data? {
         get {
-           /* From https://tools.ietf.org/html/rfc8152#section-4.2
-             Sig_structure = [
-                 context : "Signature" / "Signature1" / "CounterSignature",
-                 body_protected : empty_or_serialized_map,
-                 ? sign_protected : empty_or_serialized_map,
-                 external_aad : bstr,
-                 payload : bstr
-             ]
-             */
+           /* Structure according to https://tools.ietf.org/html/rfc8152#section-4.2 */
             let context = CBOR(stringLiteral: "Signature1")
             let externalAad = CBOR.byteString([UInt8]()) /*no external application specific data*/
             let cborArray = CBOR(arrayLiteral: context, header.rawHeader, externalAad, payload.rawPayload)
@@ -99,15 +91,15 @@ struct CWT {
     }
 
     init?(from cbor: CBOR) {
-        guard let decodedPayload = cbor.decodeBytestring() else {
+        guard let decodedPayload = cbor.decodeBytestring()?.asMap() else {
            return nil
         }
         rawPayload = cbor
-        iss = decodedPayload[PayloadKeys.iss.toCbor()]?.asString()
-        exp = decodedPayload[PayloadKeys.exp.toCbor()]?.asUInt64()
-        iat = decodedPayload[PayloadKeys.iat.toCbor()]?.asUInt64()
-        guard let hCertMap = decodedPayload[PayloadKeys.hcert.toCbor()]?.asMap(),
-              let certData = hCertMap[PayloadKeys.HcertKeys.euHealthCertV1.toCbor()]?.decodeBytestring() else {
+        iss = decodedPayload[PayloadKeys.iss]?.asString()
+        exp = decodedPayload[PayloadKeys.exp]?.asUInt64()
+        iat = decodedPayload[PayloadKeys.iat]?.asUInt64()
+        guard let hCertMap = decodedPayload[PayloadKeys.hcert]?.asMap(),
+              let certData = hCertMap[PayloadKeys.HcertKeys.euHealthCertV1]?.decodeBytestring() else {
             return nil
         }
         
@@ -126,28 +118,13 @@ struct CoseHeader {
     }
 
     init?(from cbor: CBOR){
-        guard let decodedBytestring = cbor.decodeBytestring(),
-             let keyId = decodedBytestring[Headers.keyId.toCbor()]?.asString(),
-             let alg = decodedBytestring[Headers.algorithm.toCbor()]?.asUInt64() else {
+        guard let decodedBytestring = cbor.decodeBytestring()?.asMap(),
+             let keyId = decodedBytestring[Headers.keyId]?.asString(),
+             let alg = decodedBytestring[Headers.algorithm]?.asUInt64() else {
             return nil
         }
         rawHeader = cbor
         self.keyId = keyId
         self.algorithm = alg
-    }
-}
-
-
-
-
-extension Data {
-    public var bytes : [UInt8] {
-        return [UInt8](self)
-    }
-}
-
-extension RawRepresentable where RawValue == Int {
-    fileprivate func toCbor() ->  CBOR {
-        return CBOR(integerLiteral: self.rawValue)
     }
 }
