@@ -14,8 +14,8 @@ struct Cose {
     let header : CoseHeader
     let payload : CWT
     let signature : Data
-    let rawHeader : [UInt8]? //TODO make private, use for constructing data type
-    let rawPayload : [UInt8]? //TODO make private, represents cwt
+    private let rawHeader : [UInt8]? //TODO make private, use for constructing data type
+    private let rawPayload : [UInt8]? //TODO make private, represents cwt
     
     private var signatureStruct : Data? {
         get {
@@ -39,6 +39,23 @@ struct Cose {
             let cborArray = CBOR(arrayLiteral: context, protectedHeader, externalAad, payloadCbor)
             return Data(cborArray.encode())
         }
+    }
+    
+    init?(from data: Data) {
+        guard let cose = try? CBORDecoder(input: data.bytes).decodeItem()?.asCose(),
+              let header = CoseHeader(from: cose[0]),
+              let payload = CWT(from: cose[2]),
+              let signature = cose[3].asBytes(),
+              let rawHeader = cose[0].asBytes(),
+              let rawPayload = cose[2].asBytes() else {
+            return nil
+        }
+        self.header = header
+        self.payload = payload
+        self.signature = Data(signature)
+        self.rawHeader = rawHeader
+        self.rawPayload = rawPayload
+        
     }
 
     //Only supporting ES256 signatures for the moment
@@ -66,7 +83,6 @@ struct Cose {
 }
 
 struct CWT {
-//    let header : CoseHeader
     let payload : CBOR
     let iss : String?
     let exp : UInt64?
@@ -89,14 +105,15 @@ struct CWT {
     }
 
     init?(from cbor: CBOR) {
+        guard let decodedPayload = cbor.decodeBytestring() else {
+           return nil
+        }
         payload = cbor
-        iss = cbor[PayloadKeys.iss.toCbor()]?.asString()
-        exp = cbor[PayloadKeys.exp.toCbor()]?.asUInt64()
-        iat = cbor[PayloadKeys.iat.toCbor()]?.asUInt64()
-        guard let encodedMap = cbor[PayloadKeys.hcert.toCbor()]?.encode(),
-              let hCertMap = try? CBORDecoder(input: encodedMap).decodeItem(),
-              let dataBytes = hCertMap[CBOR(integerLiteral: PayloadKeys.HcertKeys.euHealthCertV1.rawValue)]?.asBytes(),
-              let certData = try? CBORDecoder(input: dataBytes).decodeItem() else {
+        iss = decodedPayload[PayloadKeys.iss.toCbor()]?.asString()
+        exp = decodedPayload[PayloadKeys.exp.toCbor()]?.asUInt64()
+        iat = decodedPayload[PayloadKeys.iat.toCbor()]?.asUInt64()
+        guard let hCertMap = decodedPayload[PayloadKeys.hcert.toCbor()]?.asMap(),
+              let certData = hCertMap[PayloadKeys.HcertKeys.euHealthCertV1.toCbor()]?.decodeBytestring() else {
             return nil
         }
         
@@ -106,14 +123,14 @@ struct CWT {
 
 struct CoseHeader {
     var keyId : String
-    var algorithm : Int
+    var algorithm : UInt64
     
     enum Headers : Int {
         case keyId = 4
         case algorithm = 1
     }
     
-    init?(from object: NSObject?){
+    /*init?(from object: NSObject?){
         guard let dict = object as? [Int: NSObject],
               let keyId = dict[Headers.keyId.rawValue] as? String,
               let algorithm = dict[Headers.algorithm.rawValue] as? Int
@@ -122,6 +139,16 @@ struct CoseHeader {
         }
         self.keyId = keyId
         self.algorithm = algorithm
+    }*/
+    
+    init?(from cbor: CBOR){
+        guard let decodedBytestring = cbor.decodeBytestring(),
+             let keyId = decodedBytestring[Headers.keyId.toCbor()]?.asString(),
+             let alg = decodedBytestring[Headers.algorithm.toCbor()]?.asUInt64() else {
+            return nil
+        }
+        self.keyId = keyId
+        self.algorithm = alg
     }
 }
 
@@ -273,7 +300,7 @@ public struct Test : Decodable {
     }
 }
 
-
+/*
 extension ValidationCore {
     func decodePayload(from object: NSObject) -> CWT? {
         guard let payload = object.cborBytes,
@@ -285,6 +312,7 @@ extension ValidationCore {
         return cwt //VaccinationData(from: decodedPayload)
     }
 }
+ */
 
 extension CBOR {
     func unwrap() -> Any? {
@@ -326,4 +354,38 @@ extension CBOR {
     func asBytes() -> [UInt8]? {
         return self.unwrap() as? [UInt8]
     }
+    
+    func asCose() -> [CBOR]? {
+        guard let rawCose =  self.unwrap() as? CBOR,
+              let cose = rawCose.asList() else {
+            return nil
+        }
+        return cose
+    }
+    
+    func decodeBytestring() -> CBOR? {
+        guard let bytestring = self.asBytes(),
+              let decoded = try? CBORDecoder(input: bytestring).decodeItem() else {
+            return nil
+        }
+        return decoded
+    }
+    
 }
+
+extension CBOR.Tag {
+    public static let coseSign1Item = CBOR.Tag(rawValue: 18)
+}
+
+extension Data {
+    public var bytes : [UInt8] {
+        return [UInt8](self)
+    }
+}
+
+extension RawRepresentable where RawValue == Int {
+    fileprivate func toCbor() ->  CBOR {
+        return CBOR(integerLiteral: self.rawValue)
+    }
+}
+        

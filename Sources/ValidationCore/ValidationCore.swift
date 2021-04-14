@@ -1,7 +1,7 @@
 import base45_swift
 import CocoaLumberjackSwift
 import Gzip
-import CBORSwift
+//import CBORSwift
 import UIKit
 
 public struct ValidationCore {
@@ -97,29 +97,28 @@ public struct ValidationCore {
     }
 
     private func cose(from data: Data) -> Cose? {
-        let decoded = CBOR.decode(data.bytes)
-        guard let tag = decoded as? NSTag,
-              let tagObjectValue = tag.objectValue() as? [NSObject],
-              let coseHeader = decodeHeader(from: tagObjectValue[0]),
-              let cwt = decodePayload(from: tagObjectValue[2]),
-              let coseSignature = (tagObjectValue[3] as? String)?.data
-              else {
-            return nil
-        }
-        let rawHeader = tagObjectValue[0].cborBytes
-        let rawPayload = tagObjectValue[2].cborBytes
-        
-//        let vaccinationData = EuHealthCert(from: cwt.payload)
-        return Cose(header: coseHeader, payload: cwt, signature: coseSignature, rawHeader: rawHeader, rawPayload: rawPayload)
+//        let decoded = CBOR.decode(data.bytes)
+//        guard let tag = decoded as? NSTag, //TODO move to Cose
+//              let tagObjectValue = tag.objectValue() as? [NSObject],
+//              let coseHeader = decodeHeader(from: tagObjectValue[0]),
+//              let cwt = decodePayload(from: tagObjectValue[2]),
+//              let coseSignature = (tagObjectValue[3] as? String)?.data
+//              else {
+//            return nil
+//        }
+//        let rawHeader = tagObjectValue[0].cborBytes
+//        let rawPayload = tagObjectValue[2].cborBytes
+        let cose = Cose(from: data)
+        return cose//Cose(header: coseHeader, payload: cwt, signature: coseSignature, rawHeader: rawHeader, rawPayload: rawPayload)
     }
     
-    private func decodeHeader(from object: NSObject) -> CoseHeader? {
-        guard let headerData = object.cborBytes else {
-            DDLogError("Incorrect COSE header data.")
-            return nil
-        }
-        return CoseHeader(from: CBOR.decode(headerData))
-    }
+//    private func decodeHeader(from object: NSObject) -> CoseHeader? {
+//        guard let headerData = object.cborBytes else {
+//            DDLogError("Incorrect COSE header data.")
+//            return nil
+//        }
+//        return CoseHeader(from: CBOR.decode(headerData))
+//    }
     
 }
 
@@ -146,10 +145,10 @@ extension Data{
  }
 }
 
-extension NSObject {
+/*extension NSObject {
     var cborBytes : [UInt8]? {
         get {
             return (self as? String)?.data?.bytes
         }
     }
-}
+}*/
