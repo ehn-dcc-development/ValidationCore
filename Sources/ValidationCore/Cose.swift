@@ -83,7 +83,7 @@ struct CWT {
         case iss = 1
         case iat = 6
         case exp = 4
-        case hcert = 99
+        case hcert = -260
         
         enum HcertKeys : Int {
             case euHealthCertV1 = 1
