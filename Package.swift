@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "ValidationCore",
     platforms: [
-        .iOS(.v14),
+        .iOS(.v12),
     ],
     products: [
         .library(
@@ -13,11 +13,13 @@ let package = Package(
             targets: ["ValidationCore"]),
     ],
     dependencies: [
-        // .package(url: /* package url */, from: "1.0.0"),
-        .package(path: "../base45-swift/"),
-        .package(url: "https://github.com/CocoaLumberjack/CocoaLumberjack.git", from: "3.7.0"),
-        .package(name: "Gzip", url: "https://github.com/1024jp/GzipSwift", from: "5.1.1"),
-        .package(url: "https://github.com/unrelentingtech/SwiftCBOR", from: "0.4.3"),
+        .package(url: "https://github.com/ehn-digital-green-development/base45-swift", .branch("distribution/swiftpackage")),
+        .package(url: "https://github.com/CocoaLumberjack/CocoaLumberjack.git", .upToNextMajor(from: "3.7.0")),
+        .package(name: "Gzip", url: "https://github.com/1024jp/GzipSwift", .upToNextMajor(from: "5.1.1")),
+        .package(url: "https://github.com/unrelentingtech/SwiftCBOR", .upToNextMajor(from: "0.4.3")),
+        .package(url: "https://github.com/Quick/Nimble.git", .upToNextMajor(from: "9.0.0")),
+        .package(url: "https://github.com/Quick/Quick", .upToNextMajor(from: "3.1.2")),
+        .package(url: "https://github.com/AliSoftware/OHHTTPStubs", .upToNextMajor(from: "9.1.0")),
     ],
     targets: [
         .target(
@@ -29,6 +31,6 @@ let package = Package(
             ]),
         .testTarget(
             name: "ValidationCoreTests",
-            dependencies: ["ValidationCore"]),
+            dependencies: ["ValidationCore", "Nimble", "Quick", .product(name: "OHHTTPStubsSwift", package: "OHHTTPStubs")]),
     ]
 )
