@@ -1,13 +1,12 @@
 # ValidationCore
 
-Core functionality for validating EHN health certificates from QR codes. Suitable QR codes can be generated using https://dev.a-sit.at/certservice
+Core functionality for validating EHN health certificates from QR codes. Suitable QR codes can be generated using [https://dev.a-sit.at/certservice](https://dev.a-sit.at/certservice)
 
 Implements a very basic validation chain:
-
-Decode Base45-encoded QR code
-Remove scheme prefix
-Decompress with ZLib
-Verify COSE signature
+1. Decode Base45-encoded QR code
+2. Remove scheme prefix
+3. Decompress with ZLib
+4. Verify COSE signature
 
 
 ## Demo Application Code
