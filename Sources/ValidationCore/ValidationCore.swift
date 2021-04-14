@@ -1,7 +1,6 @@
 import base45_swift
 import CocoaLumberjackSwift
 import Gzip
-//import CBORSwift
 import UIKit
 
 public struct ValidationCore {
@@ -81,7 +80,7 @@ public struct ValidationCore {
     
     private func removeScheme(prefix: String, from encodedString: String) -> String? {
         guard encodedString.starts(with: prefix) else {
-            DDLogError("Encoded data string does not seem to include prefix: \(encodedString.prefix(prefix.count))")
+            DDLogError("Encoded data string does not seem to include scheme prefix: \(encodedString.prefix(prefix.count))")
             return nil
         }
         return String(encodedString.dropFirst(prefix.count))
@@ -97,30 +96,12 @@ public struct ValidationCore {
     }
 
     private func cose(from data: Data) -> Cose? {
-//        let decoded = CBOR.decode(data.bytes)
-//        guard let tag = decoded as? NSTag, //TODO move to Cose
-//              let tagObjectValue = tag.objectValue() as? [NSObject],
-//              let coseHeader = decodeHeader(from: tagObjectValue[0]),
-//              let cwt = decodePayload(from: tagObjectValue[2]),
-//              let coseSignature = (tagObjectValue[3] as? String)?.data
-//              else {
-//            return nil
-//        }
-//        let rawHeader = tagObjectValue[0].cborBytes
-//        let rawPayload = tagObjectValue[2].cborBytes
-        let cose = Cose(from: data)
-        return cose//Cose(header: coseHeader, payload: cwt, signature: coseSignature, rawHeader: rawHeader, rawPayload: rawPayload)
+       return Cose(from: data)
     }
     
-//    private func decodeHeader(from object: NSObject) -> CoseHeader? {
-//        guard let headerData = object.cborBytes else {
-//            DDLogError("Incorrect COSE header data.")
-//            return nil
-//        }
-//        return CoseHeader(from: CBOR.decode(headerData))
-//    }
-    
 }
+
+// MARK: - QrCodeReceiver
 
 extension ValidationCore : QrCodeReceiver {
     public func canceled() {
@@ -139,16 +120,4 @@ extension ValidationCore : QrCodeReceiver {
 }
 
 
-extension Data{
- func humanReadable() -> String {
-    return self.map { String(format: "%02x ", $0) }.joined()
- }
-}
 
-/*extension NSObject {
-    var cborBytes : [UInt8]? {
-        get {
-            return (self as? String)?.data?.bytes
-        }
-    }
-}*/
