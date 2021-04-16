@@ -53,8 +53,8 @@ public struct ValidationCore {
             completionHandler(.failure(.COSE_DESERIALIZATION_FAILED))
             return
         }
-        retrieveSignatureCertificate(with: cose.protectedHeader.keyId) { cert in
-            DDLogDebug("Encoded signing cert for keyId \(cose.protectedHeader.keyId): \(cert ?? "N/A")")
+        retrieveSignatureCertificate(with: cose.keyId) { cert in
+            DDLogDebug("Encoded signing cert for keyId \(cose.keyId): \(cert ?? "N/A")")
             completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: cert), payload: cose.payload.euHealthCert)))
         }
     }
@@ -63,8 +63,9 @@ public struct ValidationCore {
     //MARK: - Helper Functions
     
     /// Retrieves the signature certificate for a given keyId
-    private func retrieveSignatureCertificate(with keyId: String, _ completionHandler: @escaping (String?)->()) {
-        guard let url = URL(string: "\(CERT_SERVICE_URL)\(CERT_PATH)\(keyId)") else { 
+    private func retrieveSignatureCertificate(with keyId: String?, _ completionHandler: @escaping (String?)->()) {
+        guard let keyId = keyId,
+              let url = URL(string: "\(CERT_SERVICE_URL)\(CERT_PATH)\(keyId)") else {
             DDLogError("Cannot construct certificate query url.")
             return
         }

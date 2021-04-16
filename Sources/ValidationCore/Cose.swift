@@ -17,6 +17,15 @@ struct Cose {
     let payload : CWT
     let signature : Data
     
+    var keyId : String? {
+        get {
+            if let protectedKeyId = protectedHeader.keyId {
+                return protectedKeyId
+            }
+            return unprotectedHeader?.keyId
+        }
+    }
+    
     enum CoseType : String {
         case sign1 = "Signature1"
         case sign = "Signature"
@@ -157,7 +166,7 @@ struct CWT {
 
 struct CoseHeader {
     fileprivate let rawHeader : CBOR?
-    let keyId : String
+    let keyId : String?
     let algorithm : Algorithm
 
     enum Headers : Int {
@@ -166,31 +175,29 @@ struct CoseHeader {
     }
     
     enum Algorithm : UInt64 {
-        case es256 = 6 //TODO should be -7
-        case ps256 = 36
+        case es256 = 6 //-7
+        case ps256 = 36 //-37
     }
 
     init?(fromBytestring cbor: CBOR){
         guard let cborMap = cbor.decodeBytestring()?.asMap(),
-              let keyId = cborMap[Headers.keyId]?.asString(),
-              let algValue = cborMap[Headers.algorithm]?.asUInt64(), //TODO should be deserialized to negative Int
+              let algValue = cborMap[Headers.algorithm]?.asUInt64(),
               let alg = Algorithm(rawValue: algValue) else {
             return nil
         }
-        self.init(alg: alg, keyId: keyId, rawHeader: cbor)
+        self.init(alg: alg, keyId: cborMap[Headers.keyId]?.asString(), rawHeader: cbor)
     }
     
     init?(from cbor: CBOR) {
         guard let cborMap = cbor.asMap(),
-             let keyId = cborMap[Headers.keyId]?.asString(),
-             let algValue = cborMap[Headers.algorithm]?.asUInt64(), //TODO should be deserialized to negative Int
+             let algValue = cborMap[Headers.algorithm]?.asUInt64(),
              let alg = Algorithm(rawValue: algValue) else {
             return nil
         }
-        self.init(alg: alg, keyId: keyId)
+        self.init(alg: alg, keyId: cborMap[Headers.keyId]?.asString())
     }
     
-    private init(alg: Algorithm, keyId: String, rawHeader : CBOR? = nil){
+    private init(alg: Algorithm, keyId: String?, rawHeader : CBOR? = nil){
         self.algorithm = alg
         self.keyId = keyId
         self.rawHeader = rawHeader

@@ -22,8 +22,8 @@ extension CBOR {
         case .array(let array): return array
         case .map(let map): return map
         case .utf8String(let value): return value
-        case .unsignedInt(let value): return value
         case .negativeInt(let value): return value
+        case .unsignedInt(let value): return value
         default:
             return nil
         }
