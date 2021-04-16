@@ -18,7 +18,7 @@ extension CBOR {
         case .double(let value): return value
         case .float(let value): return value
         case .half(let value): return value
-        case .tagged(let tag, let cbor): return cbor
+        case .tagged(let tag, let cbor): return (tag, cbor)
         case .array(let array): return array
         case .map(let map): return map
         case .utf8String(let value): return value
@@ -31,6 +31,10 @@ extension CBOR {
     
     func asUInt64() -> UInt64? {
         return self.unwrap() as? UInt64
+    }
+    
+    func asInt64() -> Int64? {
+        return self.unwrap() as? Int64
     }
     
     func asString() -> String? {
@@ -49,12 +53,12 @@ extension CBOR {
         return self.unwrap() as? [UInt8]
     }
     
-    func asCose() -> [CBOR]? {
-        guard let rawCose =  self.unwrap() as? CBOR,
-              let cose = rawCose.asList() else {
+    func asCose() -> (CBOR.Tag, [CBOR])? {
+        guard let rawCose =  self.unwrap() as? (CBOR.Tag, CBOR),
+              let cosePayload = rawCose.1.asList() else {
             return nil
         }
-        return cose
+        return (rawCose.0, cosePayload)
     }
     
     func decodeBytestring() -> CBOR? {
@@ -69,6 +73,7 @@ extension CBOR {
 
 extension CBOR.Tag {
     public static let coseSign1Item = CBOR.Tag(rawValue: 18)
+    public static let coseSignItem = CBOR.Tag(rawValue: 98)
 }
 
 

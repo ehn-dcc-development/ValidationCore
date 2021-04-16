@@ -53,7 +53,8 @@ public struct ValidationCore {
             completionHandler(.failure(.COSE_DESERIALIZATION_FAILED))
             return
         }
-        retrieveSignatureCertificate(with: cose.header.keyId) { cert in
+        retrieveSignatureCertificate(with: cose.protectedHeader.keyId) { cert in
+            DDLogDebug("Encoded signing cert for keyId \(cose.protectedHeader.keyId): \(cert ?? "N/A")")
             completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: cert), payload: cose.payload.euHealthCert)))
         }
     }
@@ -115,6 +116,7 @@ public struct ValidationCore {
 extension ValidationCore : QrCodeReceiver {
     public func canceled() {
         DDLogDebug("QR code scanning cancelled.")
+        completionHandler?(.failure(.USER_CANCELLED))
     }
     
     /// Process the scanned EHN health certificate

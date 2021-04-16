@@ -17,4 +17,5 @@ public enum ValidationError : Error {
     case INVALID_JSON_PAYLOAD
     case QR_CODE_ERROR
     case CERTIFICATE_QUERY_FAILED
+    case USER_CANCELLED
 }
