@@ -11,28 +11,68 @@ import CocoaLumberjackSwift
 import Security
 
 struct Cose {
-    let header : CoseHeader
+    private let type: CoseType
+    let protectedHeader : CoseHeader
+    let unprotectedHeader : CoseHeader?
     let payload : CWT
     let signature : Data
+    
+    var keyId : String? {
+        get {
+            if let protectedKeyId = protectedHeader.keyId {
+                return protectedKeyId
+            }
+            return unprotectedHeader?.keyId
+        }
+    }
+    
+    enum CoseType : String {
+        case sign1 = "Signature1"
+        case sign = "Signature"
+        
+        static func from(tag: CBOR.Tag) -> CoseType? {
+            switch tag {
+            case .coseSign1Item: return .sign1
+            case .coseSignItem: return .sign
+            default:
+                return nil
+            }
+        }
+    }
 
     private var signatureStruct : Data? {
         get {
-           /* Structure according to https://tools.ietf.org/html/rfc8152#section-4.2 */
-            let context = CBOR(stringLiteral: "Signature1")
-            let externalAad = CBOR.byteString([UInt8]()) /*no external application specific data*/
-            let cborArray = CBOR(arrayLiteral: context, header.rawHeader, externalAad, payload.rawPayload)
-            return Data(cborArray.encode())
+            guard let header = protectedHeader.rawHeader else {
+                return nil
+            }
+            
+            /* Structure according to https://tools.ietf.org/html/rfc8152#section-4.2 */
+            switch type {
+            case .sign1:
+                let context = CBOR(stringLiteral: self.type.rawValue)
+                let externalAad = CBOR.byteString([UInt8]()) /*no external application specific data*/
+                let cborArray = CBOR(arrayLiteral: context, header, externalAad, payload.rawPayload)
+                return Data(cborArray.encode())
+            default:
+                DDLogError("COSE Sign messages are not yet supported.")
+                return nil
+                
+            }
+
         }
     }
     
     init?(from data: Data) {
         guard let cose = try? CBORDecoder(input: data.bytes).decodeItem()?.asCose(),
-              let header = CoseHeader(from: cose[0]),
-              let payload = CWT(from: cose[2]),
-              let signature = cose[3].asBytes() else {
+              let type = CoseType.from(tag: cose.0),
+              let protectedHeader = CoseHeader(fromBytestring: cose.1[0]),
+              let payload = CWT(from: cose.1[2]),
+              let signature = cose.1[3].asBytes() else {
             return nil
         }
-        self.header = header
+        self.type = type
+        self.protectedHeader = protectedHeader
+        self.unprotectedHeader = CoseHeader(from: cose.1[1])
         self.payload = payload
         self.signature = Data(signature)
     }
@@ -49,8 +89,14 @@ struct Cose {
             return false
         }
  
-        /* Only supporting ES256 signatures and Sign1 messages for the moment */
-        return hasCoseSign1ValidSignature(for: publicKey)
+        /* Only supporting Sign1 messages for the moment */
+        switch type {
+        case .sign1:
+            return hasCoseSign1ValidSignature(for: publicKey)
+        default:
+            DDLogError("COSE Sign messages are not yet supported.")
+            return false
+        }
    }
     
     private func hasCoseSign1ValidSignature(for key: SecKey) -> Bool {
@@ -58,13 +104,24 @@ struct Cose {
             DDLogError("Cannot create Sign1 structure.")
             return false
         }
+        
+
         return verifySignature(key: key, signedData: signedData, rawSignature: signature)
     }
     
-    private func verifySignature(key: SecKey, signedData : Data, rawSignature : Data, algorithm : SecKeyAlgorithm = .ecdsaSignatureMessageX962SHA256) -> Bool {
-        let asn1Signature = Asn1Encoder().convertRawSignatureIntoAsn1(signature)
+    private func verifySignature(key: SecKey, signedData : Data, rawSignature : Data) -> Bool {
+        var algorithm : SecKeyAlgorithm
+        var signature = rawSignature
+        switch protectedHeader.algorithm {
+        case .es256:
+            algorithm = .ecdsaSignatureMessageX962SHA256
+            signature = Asn1Encoder().convertRawSignatureIntoAsn1(rawSignature)
+        case .ps256:
+            algorithm = .rsaSignatureMessagePSSSHA256
+        }
+ 
         var error : Unmanaged<CFError>?
-        let result = SecKeyVerifySignature(key, .ecdsaSignatureMessageX962SHA256, signedData as CFData, asn1Signature as CFData, &error)
+        let result = SecKeyVerifySignature(key, algorithm, signedData as CFData, signature as CFData, &error)
         if let error = error {
             DDLogError("Signature verification error: \(error)")
         }
@@ -108,23 +165,41 @@ struct CWT {
 }
 
 struct CoseHeader {
-    fileprivate let rawHeader : CBOR
-    let keyId : String
-    let algorithm : UInt64
+    fileprivate let rawHeader : CBOR?
+    let keyId : String?
+    let algorithm : Algorithm
 
     enum Headers : Int {
         case keyId = 4
         case algorithm = 1
     }
+    
+    enum Algorithm : UInt64 {
+        case es256 = 6 //-7
+        case ps256 = 36 //-37
+    }
 
-    init?(from cbor: CBOR){
-        guard let decodedBytestring = cbor.decodeBytestring()?.asMap(),
-             let keyId = decodedBytestring[Headers.keyId]?.asString(),
-             let alg = decodedBytestring[Headers.algorithm]?.asUInt64() else {
+    init?(fromBytestring cbor: CBOR){
+        guard let cborMap = cbor.decodeBytestring()?.asMap(),
+              let algValue = cborMap[Headers.algorithm]?.asUInt64(),
+              let alg = Algorithm(rawValue: algValue) else {
             return nil
         }
-        rawHeader = cbor
-        self.keyId = keyId
+        self.init(alg: alg, keyId: cborMap[Headers.keyId]?.asString(), rawHeader: cbor)
+    }
+    
+    init?(from cbor: CBOR) {
+        guard let cborMap = cbor.asMap(),
+             let algValue = cborMap[Headers.algorithm]?.asUInt64(),
+             let alg = Algorithm(rawValue: algValue) else {
+            return nil
+        }
+        self.init(alg: alg, keyId: cborMap[Headers.keyId]?.asString())
+    }
+    
+    private init(alg: Algorithm, keyId: String?, rawHeader : CBOR? = nil){
         self.algorithm = alg
+        self.keyId = keyId
+        self.rawHeader = rawHeader
     }
 }
