@@ -7,15 +7,20 @@
 
 import Foundation
 
-public enum ValidationError : Int, Error {
-    case GENERAL_ERROR
-    case INVALID_SCHEME_PREFIX
-    case DECOMPRESSION_FAILED
-    case BASE_45_DECODING_FAILED
-    case COSE_DESERIALIZATION_FAILED
-    case CBOR_DESERIALIZATION_FAILED
-    case INVALID_JSON_PAYLOAD
-    case QR_CODE_ERROR
-    case CERTIFICATE_QUERY_FAILED
-    case USER_CANCELLED
+public enum ValidationError : String, Error {
+    case GENERAL_ERROR = "General error"
+    case INVALID_SCHEME_PREFIX = "Invalid scheme prefix"
+    case DECOMPRESSION_FAILED = "ZLib decompression failed"
+    case BASE_45_DECODING_FAILED = "Base45 decoding failed"
+    case COSE_DESERIALIZATION_FAILED = "COSE deserialization failed"
+    case CBOR_DESERIALIZATION_FAILED = "CBOR deserialization failed"
+    case QR_CODE_ERROR = "QR code error"
+    case CERTIFICATE_QUERY_FAILED = "Signing certificate query failed"
+    case USER_CANCELLED = "User cancelled"
+    
+    public var message : String {
+        get {
+            return self.rawValue
+        }
+    }
 }
