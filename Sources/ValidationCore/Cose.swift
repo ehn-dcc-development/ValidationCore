@@ -5,7 +5,7 @@
 //  Created by Dominik Mocher on 07.04.21.
 //
 
-import Foundation
+import UIKit
 import SwiftCBOR
 import CocoaLumberjackSwift
 import Security
@@ -19,10 +19,14 @@ struct Cose {
     
     var keyId : String? {
         get {
-            if let protectedKeyId = protectedHeader.keyId {
-                return protectedKeyId
+            var keyData : Data?
+            if let unprotectedKeyId = unprotectedHeader?.keyId {
+                keyData = Data(unprotectedKeyId)
             }
-            return unprotectedHeader?.keyId
+            if let protectedKeyId = protectedHeader.keyId {
+                keyData = Data(protectedKeyId)
+            }
+            return keyData?.base64UrlEncodedString()
         }
     }
     
@@ -166,7 +170,7 @@ struct CWT {
 
 struct CoseHeader {
     fileprivate let rawHeader : CBOR?
-    let keyId : String?
+    let keyId : [UInt8]?
     let algorithm : Algorithm
 
     enum Headers : Int {
@@ -185,7 +189,7 @@ struct CoseHeader {
               let alg = Algorithm(rawValue: algValue) else {
             return nil
         }
-        self.init(alg: alg, keyId: cborMap[Headers.keyId]?.asString(), rawHeader: cbor)
+        self.init(alg: alg, keyId: cborMap[Headers.keyId]?.asBytes(), rawHeader: cbor)
     }
     
     init?(from cbor: CBOR) {
@@ -194,10 +198,10 @@ struct CoseHeader {
              let alg = Algorithm(rawValue: algValue) else {
             return nil
         }
-        self.init(alg: alg, keyId: cborMap[Headers.keyId]?.asString())
+        self.init(alg: alg, keyId: cborMap[Headers.keyId]?.asBytes())
     }
     
-    private init(alg: Algorithm, keyId: String?, rawHeader : CBOR? = nil){
+    private init(alg: Algorithm, keyId: [UInt8]?, rawHeader : CBOR? = nil){
         self.algorithm = alg
         self.keyId = keyId
         self.rawHeader = rawHeader

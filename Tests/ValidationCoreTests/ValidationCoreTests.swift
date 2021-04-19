@@ -65,7 +65,16 @@ class ValidationCoreSpec: QuickSpec {
                     }
                 }
             }
-
+            
+            /*context("can handle COSE specific characteristics"){
+                it("can use keyId from unprotected header") {
+                    //TODO
+                }
+                
+                it("can use correct keyId if both header claims are set") {
+                    //TODO
+                }
+            }*/
         }
     }
     
