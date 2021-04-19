@@ -122,6 +122,9 @@ struct Cose {
             signature = Asn1Encoder().convertRawSignatureIntoAsn1(rawSignature)
         case .ps256:
             algorithm = .rsaSignatureMessagePSSSHA256
+        default:
+            DDLogError("Verification algorithm not supported.")
+            return false
         }
  
         var error : Unmanaged<CFError>?
@@ -171,7 +174,7 @@ struct CWT {
 struct CoseHeader {
     fileprivate let rawHeader : CBOR?
     let keyId : [UInt8]?
-    let algorithm : Algorithm
+    let algorithm : Algorithm?
 
     enum Headers : Int {
         case keyId = 4
@@ -193,15 +196,15 @@ struct CoseHeader {
     }
     
     init?(from cbor: CBOR) {
-        guard let cborMap = cbor.asMap(),
-             let algValue = cborMap[Headers.algorithm]?.asUInt64(),
-             let alg = Algorithm(rawValue: algValue) else {
-            return nil
+        let cborMap = cbor.asMap()
+        var alg : Algorithm?
+        if let algValue = cborMap?[Headers.algorithm]?.asUInt64() {
+             alg = Algorithm(rawValue: algValue)
         }
-        self.init(alg: alg, keyId: cborMap[Headers.keyId]?.asBytes())
+        self.init(alg: alg, keyId: cborMap?[Headers.keyId]?.asBytes())
     }
     
-    private init(alg: Algorithm, keyId: [UInt8]?, rawHeader : CBOR? = nil){
+    private init(alg: Algorithm?, keyId: [UInt8]?, rawHeader : CBOR? = nil){
         self.algorithm = alg
         self.keyId = keyId
         self.rawHeader = rawHeader

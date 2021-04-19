@@ -20,7 +20,7 @@ class ValidationCoreSpec: QuickSpec {
             
             context("process complete certificates and"){
                 it("should verify correct test certificate") {
-                    let correctEhnTestCert = TestDataProvider.correctEhnTestCert
+                    let correctEhnTestCert = TestDataProvider.Correct.ehnTestCertificate
                     self.mockSignatureCert(correctEhnTestCert.keyId, correctEhnTestCert.encodedSigningCert)
                     validationCore.validate(encodedData: correctEhnTestCert.encodedEhnCert) { result in
                         switch result {
@@ -32,7 +32,7 @@ class ValidationCoreSpec: QuickSpec {
                 }
                 
                 it("should verify correct vaccination certificate") {
-                    let correctEhnVaccinationCert = TestDataProvider.correctEhnVaccinationCert
+                    let correctEhnVaccinationCert = TestDataProvider.Correct.ehnVaccinationCert
                     self.mockSignatureCert(correctEhnVaccinationCert.keyId, correctEhnVaccinationCert.encodedSigningCert)
                     validationCore.validate(encodedData: correctEhnVaccinationCert.encodedEhnCert) { result in
                         switch result {
@@ -44,7 +44,7 @@ class ValidationCoreSpec: QuickSpec {
                 }
                 
                 it("should verify correct recovery certificate") {
-                    let correctEhnRecoveryCert = TestDataProvider.correctEhnRecoveryCert
+                    let correctEhnRecoveryCert = TestDataProvider.Correct.ehnRecoveryCert
                     self.mockSignatureCert(correctEhnRecoveryCert.keyId, correctEhnRecoveryCert.encodedSigningCert)
                     validationCore.validate(encodedData: correctEhnRecoveryCert.encodedEhnCert) { result in
                         switch result {
@@ -55,7 +55,7 @@ class ValidationCoreSpec: QuickSpec {
                 }
                 
                 it("should verify certificate with RSA PSS signature"){
-                    let rsaSignedCert = TestDataProvider.correctEhnRsaSignedVaccinationCert
+                    let rsaSignedCert = TestDataProvider.Correct.ehnRsaSignedVaccinationCert
                     self.mockSignatureCert(rsaSignedCert.keyId, rsaSignedCert.encodedSigningCert)
                     validationCore.validate(encodedData: rsaSignedCert.encodedEhnCert) { result in
                         switch result {
@@ -66,15 +66,18 @@ class ValidationCoreSpec: QuickSpec {
                 }
             }
             
-            /*context("can handle COSE specific characteristics"){
-                it("can use keyId from unprotected header") {
-                    //TODO
+            context("can handle COSE specific characteristics"){
+                it("does not accept alg in unprotected header") {
+                    let incorrectEhnCert = TestDataProvider.Failure.unprotectedAlgHeader
+                    self.mockSignatureCert(incorrectEhnCert.keyId, incorrectEhnCert.encodedSigningCert)
+                    validationCore.validate(encodedData: incorrectEhnCert.encodedEhnCert) { result in
+                        switch result {
+                        case .success: XCTFail("Should not be able to deserialize incorrect CWT")
+                        case .failure(let error): expect(error).to(beError(ValidationError.COSE_DESERIALIZATION_FAILED))
+                        }
+                    }
                 }
-                
-                it("can use correct keyId if both header claims are set") {
-                    //TODO
-                }
-            }*/
+           }
         }
     }
     

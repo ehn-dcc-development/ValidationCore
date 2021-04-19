@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum ValidationError : Error {
+public enum ValidationError : Int, Error {
     case GENERAL_ERROR
     case INVALID_SCHEME_PREFIX
     case DECOMPRESSION_FAILED
