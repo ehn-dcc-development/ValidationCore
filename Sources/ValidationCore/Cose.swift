@@ -163,11 +163,12 @@ struct CWT {
         exp = decodedPayload[PayloadKeys.exp]?.asUInt64()
         iat = decodedPayload[PayloadKeys.iat]?.asUInt64()
         guard let hCertMap = decodedPayload[PayloadKeys.hcert]?.asMap(),
-              let certData = hCertMap[PayloadKeys.HcertKeys.euHealthCertV1]?.decodeBytestring() else {
+              let certData = hCertMap[PayloadKeys.HcertKeys.euHealthCertV1],
+              let euHealthCert = EuHealthCert(from: certData) else {
             return nil
         }
         
-        euHealthCert = EuHealthCert(from: certData)
+        self.euHealthCert = euHealthCert
     }
 }
 
