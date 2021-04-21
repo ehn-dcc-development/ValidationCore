@@ -8,7 +8,7 @@
 import Foundation
 import SwiftCBOR
 
-public struct EuHealthCert {
+public struct EuHealthCert : Codable {
     public let person: Person
     public let vaccinations: [Vaccination]?
     public let pastInfections: [PastInfection]?
@@ -45,11 +45,11 @@ public struct EuHealthCert {
     }
 }
 
-public struct Person {
+public struct Person : Codable {
     public let givenName: String
     public let familyName: String?
     public let birthDate: String
-    public let gender: String
+    public let gender: String?
     public let identifier: [Identifier?]?
     
     private enum Keys : String {
@@ -63,19 +63,18 @@ public struct Person {
     init?(from cbor: CBOR?) {
         guard let cbor = cbor?.asMap(),
               let givenName = cbor[Keys.givenName]?.asString(),
-              let birthDate = cbor[Keys.birthDate]?.asString(),
-              let gender = cbor[Keys.gender]?.asString() else {
+              let birthDate = cbor[Keys.birthDate]?.asString() else {
             return nil
         }
         self.givenName = givenName
         self.birthDate = birthDate
-        self.gender = gender
+        self.gender = cbor[Keys.gender]?.asString()
         familyName = cbor[Keys.familyName]?.asString()
         identifier = (cbor[Keys.identifier]?.asList())?.compactMap { Identifier(from: $0) } ?? nil
     }
 }
 
-public struct Identifier {
+public struct Identifier : Codable {
     public let system: String
     public let value: String
     public let country: String?
@@ -98,7 +97,7 @@ public struct Identifier {
     }
 }
 
-public struct Vaccination {
+public struct Vaccination : Codable {
     public let disease: String
     public let vaccine: String
     public let medicinialProduct: String
@@ -148,7 +147,7 @@ public struct Vaccination {
     }
 }
 
-public struct Test {
+public struct Test : Codable {
     public let disease: String
     public let type: String
     public let manufacturer: String?
@@ -194,7 +193,7 @@ public struct Test {
     }
 }
 
-public struct PastInfection {
+public struct PastInfection : Codable {
     public let disease: String
     public let dateFirstPositiveTest: String
     public let countryOfTest: String
@@ -218,7 +217,7 @@ public struct PastInfection {
     }
 }
 
-public struct CertificateMetadata {
+public struct CertificateMetadata : Codable {
     public let issuer: String?
     public let identifier: String?
     public let validFrom: String?
