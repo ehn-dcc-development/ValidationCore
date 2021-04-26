@@ -74,7 +74,7 @@ Implements a very basic validation chain:
 
   #  When using multiple platforms
   spec.ios.deployment_target = "12.0"
-  spec.swift_version = '4.0'
+  spec.swift_version = '5.0'
   # spec.osx.deployment_target = "10.7"
   # spec.watchos.deployment_target = "2.0"
   # spec.tvos.deployment_target = "9.0"

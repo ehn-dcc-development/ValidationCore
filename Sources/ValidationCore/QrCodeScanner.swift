@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import UIKit
 
 public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     var captureSession: AVCaptureSession!
