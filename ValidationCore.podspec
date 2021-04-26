@@ -17,7 +17,7 @@ Pod::Spec.new do |spec|
 
   spec.name         = "ValidationCore"
   spec.version      = "0.0.1"
-  spec.summary      = "Core functionality for validating EHN health certificates from QR codes. Suitable QR codes can be generated using https://dev.a-sit.at/certservice"
+  spec.summary      = "Validating EHN health certificates from QR codes"
 
   # This description is used to generate tags and improve search results.
   #   * Think: What does it do? Why did you write it? What is the focus?
@@ -73,7 +73,8 @@ Implements a very basic validation chain:
   # spec.platform     = :ios, "5.0"
 
   #  When using multiple platforms
-  # spec.ios.deployment_target = "5.0"
+  spec.ios.deployment_target = "12.0"
+  spec.swift_version = '4.0'
   # spec.osx.deployment_target = "10.7"
   # spec.watchos.deployment_target = "2.0"
   # spec.tvos.deployment_target = "9.0"
@@ -140,4 +141,6 @@ Implements a very basic validation chain:
   # spec.xcconfig = { "HEADER_SEARCH_PATHS" => "$(SDKROOT)/usr/include/libxml2" }
   # spec.dependency "JSONKit", "~> 1.4"
 
+  spec.dependency "SwiftCBOR"
+  spec.dependency "GzipSwift"
 end
