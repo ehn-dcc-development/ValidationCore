@@ -10,90 +10,61 @@ import SwiftCBOR
 
 public struct EuHealthCert : Codable {
     public let person: Person
+    public let dateOfBirth : String
+    public let version: String
     public let vaccinations: [Vaccination]?
     public let pastInfections: [PastInfection]?
     public let tests: [Test]?
-    public let certificateMetadata: CertificateMetadata?
-    public let dgcid : String
-    public let version: String
-    
-    private enum Keys : String {
-        case person = "sub"
-        case vaccinations = "vac"
-        case pastInfections = "rec"
-        case tests = "tst"
-        case certificateMetadata = "cert"
-        case dgcid = "dgcid"
-        case version = "v"
+
+    private enum CodingKeys : String, CodingKey {
+        case person = "nam"
+        case dateOfBirth = "dob"
+        case vaccinations = "v"
+        case pastInfections = "r"
+        case tests = "t"
+        case version = "ver"
     }
  
     init?(from cbor: CBOR) {
-        guard let cbor = cbor.asMap(),
-              let person = Person(from: cbor[Keys.person]),
-              let dgcid = cbor[Keys.dgcid]?.asString(),
-              let version = cbor[Keys.version]?.asString() else {
+       guard let cbor = cbor.asMap(),
+              let person = Person(from: cbor[CodingKeys.person]),
+              let dateOfBirth = cbor[CodingKeys.dateOfBirth]?.asString(),
+              let version = cbor[CodingKeys.version]?.asString() else {
             return nil
         }
               
         self.person = person
-        self.dgcid = dgcid
+        self.dateOfBirth = dateOfBirth
         self.version = version
-        vaccinations = (cbor[Keys.vaccinations]?.asList())?.compactMap { Vaccination(from: $0) } ?? nil
-        pastInfections = (cbor[Keys.pastInfections]?.asList())?.compactMap { PastInfection(from: $0) } ?? nil
-        tests = (cbor[Keys.tests]?.asList())?.compactMap { Test(from: $0) } ?? nil
-        certificateMetadata = CertificateMetadata(from: cbor[Keys.certificateMetadata])
+        vaccinations = (cbor[CodingKeys.vaccinations]?.asList())?.compactMap { Vaccination(from: $0) } ?? nil
+        pastInfections = (cbor[CodingKeys.pastInfections]?.asList())?.compactMap { PastInfection(from: $0) } ?? nil
+        tests = (cbor[CodingKeys.tests]?.asList())?.compactMap { Test(from: $0) } ?? nil
     }
 }
 
 public struct Person : Codable {
-    public let givenName: String
+    public let givenName: String?
+    public let standardizedGivenName: String?
     public let familyName: String?
-    public let birthDate: String
-    public let gender: String?
-    public let identifier: [Identifier?]?
-    
-    private enum Keys : String {
+    public let standardizedFamilyName: String
+
+    private enum CodingKeys : String, CodingKey {
         case givenName = "gn"
+        case standardizedGivenName = "gnt"
         case familyName = "fn"
-        case birthDate = "dob"
-        case gender = "gen"
-        case identifier = "id"
+        case standardizedFamilyName = "fnt"
     }
  
     init?(from cbor: CBOR?) {
         guard let cbor = cbor?.asMap(),
-              let givenName = cbor[Keys.givenName]?.asString(),
-              let birthDate = cbor[Keys.birthDate]?.asString() else {
+              let standardizedFamilyName = cbor[CodingKeys.standardizedFamilyName]?.asString()
+              else {
             return nil
         }
-        self.givenName = givenName
-        self.birthDate = birthDate
-        self.gender = cbor[Keys.gender]?.asString()
-        familyName = cbor[Keys.familyName]?.asString()
-        identifier = (cbor[Keys.identifier]?.asList())?.compactMap { Identifier(from: $0) } ?? nil
-    }
-}
-
-public struct Identifier : Codable {
-    public let system: String
-    public let value: String
-    public let country: String?
-    
-    private enum Keys : String {
-        case system = "t"
-        case value = "i"
-        case country = "c"
-    }
-    
-    init?(from cbor: CBOR?) {
-        guard let cbor = cbor?.asMap(),
-              let system = cbor[Keys.system]?.asString(),
-              let value = cbor[Keys.value]?.asString() else {
-            return nil
-        }
-        self.system = system
-        self.value = value
-        country = cbor[Keys.country]?.asString()
+        self.standardizedFamilyName = standardizedFamilyName
+        givenName = cbor[CodingKeys.givenName]?.asString()
+        familyName = cbor[CodingKeys.familyName]?.asString()
+        standardizedGivenName = cbor[CodingKeys.standardizedGivenName]?.asString()
     }
 }
 
@@ -102,94 +73,104 @@ public struct Vaccination : Codable {
     public let vaccine: String
     public let medicinialProduct: String
     public let marketingAuthorizationHolder: String
-    public let number: UInt64
-    public let numberOf: UInt64
-    public let lotNumber: String?
+    public let doseNumber: UInt64
+    public let totalDoses: UInt64
     public let vaccinationDate: String
-    public let administeringCenter: String?
     public let country: String
+    public let certificateIssuer: String
+    public let certificateIdentifier: String
     
-    private enum Keys : String {
-           case disease = "dis"
-           case vaccine = "vap"
-           case medicinialProduct = "mep"
-           case marketingAuthorizationHolder = "aut"
-           case number = "seq"
-           case numberOf = "tot"
-           case lotNumber = "lot"
-           case vaccinationDate = "dat"
-           case administeringCenter = "adm"
-           case country = "cou"
+    private enum CodingKeys : String, CodingKey {
+           case disease = "tg"
+           case vaccine = "vp"
+           case medicinialProduct = "mp"
+           case marketingAuthorizationHolder = "ma"
+           case doseNumber = "dn"
+           case totalDoses = "sd"
+           case vaccinationDate = "dt"
+           case country = "co"
+        case certificateIssuer = "is"
+        case certificateIdentifier = "ci"
     }
        
     init?(from cbor: CBOR?) {
-        guard let cbor = cbor?.asMap(),
-         let disease = cbor[Keys.disease]?.asString(),
-         let vaccine = cbor[Keys.vaccine]?.asString(),
-         let medicinialProduct = cbor[Keys.medicinialProduct]?.asString(),
-         let marketingAuthorizationHolder = cbor[Keys.marketingAuthorizationHolder]?.asString(),
-         let number = cbor[Keys.number]?.asUInt64(),
-         let numberOf = cbor[Keys.numberOf]?.asUInt64(),
-         let vaccinationDate = cbor[Keys.vaccinationDate]?.asString(),
-         let country = cbor[Keys.country]?.asString() else {
+       guard let cbor = cbor?.asMap(),
+         let disease = cbor[CodingKeys.disease]?.asString(),
+         let vaccine = cbor[CodingKeys.vaccine]?.asString(),
+         let medicinialProduct = cbor[CodingKeys.medicinialProduct]?.asString(),
+         let marketingAuthorizationHolder = cbor[CodingKeys.marketingAuthorizationHolder]?.asString(),
+         let doseNumber = cbor[CodingKeys.doseNumber]?.asUInt64(),
+         let totalDoses = cbor[CodingKeys.totalDoses]?.asUInt64(),
+         let vaccinationDate = cbor[CodingKeys.vaccinationDate]?.asString(),
+         let country = cbor[CodingKeys.country]?.asString(),
+         let certIssuer = cbor[CodingKeys.certificateIssuer]?.asString(),
+         let certIdentifier = cbor[CodingKeys.certificateIdentifier]?.asString() else {
             return nil
         }
         self.disease = disease
         self.vaccine = vaccine
         self.medicinialProduct = medicinialProduct
         self.marketingAuthorizationHolder = marketingAuthorizationHolder
-        self.number = number
-        self.numberOf = numberOf
+        self.doseNumber = doseNumber
+        self.totalDoses = totalDoses
         self.vaccinationDate = vaccinationDate
         self.country = country
-        lotNumber = cbor[Keys.lotNumber]?.asString()
-        administeringCenter = cbor[Keys.administeringCenter]?.asString()
+        self.certificateIssuer = certIssuer
+        self.certificateIdentifier = certIdentifier
     }
 }
 
 public struct Test : Codable {
     public let disease: String
     public let type: String
+    public let testName: String?
     public let manufacturer: String?
-    public let sampleOrigin: String?
-    public let timestampSample: String
-    public let timestampResult : String
+    public let timestampSample: UInt64
+    public let timestampResult : UInt64?
     public let result: String
-    public let facility: String
+    public let testCenter: String
     public let country: String
+    public let certificateIssuer: String
+    public let certificateIdentifier: String
 
-    private enum Keys : String {
-        case disease = "dis"
-        case type = "typ"
-        case manufacturer = "tma"
-        case sampleOrigin = "ori"
-        case timestampSample = "dts"
-        case timestampResult = "dtr"
-        case result = "res"
-        case facility = "fac"
-        case country = "cou"
+    private enum CodingKeys : String, CodingKey {
+        case disease = "tg"
+        case type = "tt"
+        case testName = "nm"
+        case manufacturer = "ma"
+        case timestampSample = "sc"
+        case timestampResult = "dr"
+        case result = "tr"
+        case testCenter = "tc"
+        case country = "co"
+        case certificateIssuer = "is"
+        case certificateIdentifier = "ci"
     }
     
     init?(from cbor: CBOR?) {
-        guard let cbor = cbor?.asMap(),
-              let disease = cbor[Keys.disease]?.asString(),
-              let type = cbor[Keys.type]?.asString(),
-              let timestampSample = cbor[Keys.timestampSample]?.asString(),
-              let timestampResult = cbor[Keys.timestampResult]?.asString(),
-              let result = cbor[Keys.result]?.asString(),
-              let facility = cbor[Keys.facility]?.asString(),
-              let country = cbor[Keys.country]?.asString() else {
+       guard let cbor = cbor?.asMap(),
+              let disease = cbor[CodingKeys.disease]?.asString(),
+              let type = cbor[CodingKeys.type]?.asString(),
+              let timestampSample = cbor[CodingKeys.timestampSample]?.asUInt64(),
+              let result = cbor[CodingKeys.result]?.asString(),
+              let testCenter = cbor[CodingKeys.testCenter]?.asString(),
+              let country = cbor[CodingKeys.country]?.asString(),
+              let certIssuer = cbor[CodingKeys.certificateIssuer]?.asString(),
+              let certIdentifier = cbor[CodingKeys.certificateIdentifier]?.asString() else {
             return nil
         }
+        
         self.disease = disease
         self.type = type
         self.timestampSample = timestampSample
-        self.timestampResult = timestampResult
         self.result = result
-        self.facility = facility
+        self.testCenter = testCenter
         self.country = country
-        manufacturer = cbor[Keys.manufacturer]?.asString()
-        sampleOrigin = cbor[Keys.sampleOrigin]?.asString()
+        self.certificateIssuer = certIssuer
+        self.certificateIdentifier = certIdentifier
+        manufacturer = cbor[CodingKeys.manufacturer]?.asString()
+        testName = cbor[CodingKeys.testName]?.asString()
+        timestampResult = cbor[CodingKeys.timestampResult]?.asUInt64()
     }
 }
 
@@ -197,61 +178,38 @@ public struct PastInfection : Codable {
     public let disease: String
     public let dateFirstPositiveTest: String
     public let countryOfTest: String
+    public let certificateIssuer: String
+    public let validFrom: String
+    public let validUntil: String
+    public let certificateIdentifier: String
     
-    private enum Keys : String {
-        case disease = "dis"
-        case dateFirstPositiveTest = "dat"
-        case countryOfTest = "cou"
+    private enum CodingKeys : String, CodingKey {
+        case disease = "tg"
+        case dateFirstPositiveTest = "fr"
+        case countryOfTest = "co"
+        case certificateIssuer = "is"
+        case validFrom = "df"
+        case validUntil = "du"
+        case certificateIdentifier = "ci"
     }
     
     init?(from cbor: CBOR?) {
         guard let cbor = cbor?.asMap(),
-              let disease = cbor[Keys.disease]?.asString(),
-            let countryOfTest = cbor[Keys.countryOfTest]?.asString(),
-            let dateFirstPositiveTest = cbor[Keys.dateFirstPositiveTest]?.asString() else {
+              let disease = cbor[CodingKeys.disease]?.asString(),
+              let countryOfTest = cbor[CodingKeys.countryOfTest]?.asString(),
+              let dateFirstPositiveTest = cbor[CodingKeys.dateFirstPositiveTest]?.asString(),
+              let certIssuer = cbor[CodingKeys.certificateIssuer]?.asString(),
+              let validFrom = cbor[CodingKeys.validFrom]?.asString(),
+              let validUntil = cbor[CodingKeys.validUntil]?.asString(),
+              let certIdentifier = cbor[CodingKeys.certificateIdentifier]?.asString() else {
             return nil
         }
         self.disease = disease
         self.countryOfTest = countryOfTest
         self.dateFirstPositiveTest = dateFirstPositiveTest
+        self.certificateIssuer = certIssuer
+        self.certificateIdentifier = certIdentifier
+        self.validFrom = validFrom
+        self.validUntil = validUntil
     }
 }
-
-public struct CertificateMetadata : Codable {
-    public let issuer: String?
-    public let identifier: String?
-    public let validFrom: String?
-    public let validUntil: String?
-    public let validUntilextended: String?
-    public let revokelistidentifier: String?
-    public let schemaVersion: String?
-    public let country: String?
-    
-    private enum Keys : String {
-        case identifier = "id"
-        case issuer = "is"
-        case validFrom = "vf"
-        case schemaVersion = "vr"
-        case validUntil = "vu"
-        case validUntilExtended = "validUntilextended"
-        case revokeListIdentifier = "revokelistidentifier"
-        case country = "co"
-    }
-    
-    init?(from cbor: CBOR?) {
-        guard let cbor = cbor?.asMap() else {
-            return nil
-        }
-        identifier = cbor[Keys.identifier]?.asString()
-        issuer = cbor[Keys.issuer]?.asString()
-        validFrom = cbor[Keys.validFrom]?.asString()
-        schemaVersion = cbor[Keys.schemaVersion]?.asString()
-        validUntil = cbor[Keys.validUntil]?.asString()
-        validUntilextended = cbor[Keys.validUntilExtended]?.asString()
-        revokelistidentifier = cbor[Keys.revokeListIdentifier]?.asString()
-        country = cbor[Keys.country]?.asString()
-    }
-}
-
-
-
