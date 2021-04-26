@@ -1,5 +1,3 @@
-import base45_swift
-import CocoaLumberjackSwift
 import Gzip
 import UIKit
 
@@ -15,9 +13,7 @@ public struct ValidationCore {
     private var completionHandler : ((Result<ValidationResult, ValidationError>) -> ())?
     private var scanner : QrCodeScanner?
     
-    public init(){
-        DDLog.add(DDOSLogger.sharedInstance)
-    }
+    public init(){}
 
     
     //MARK: - Public API
@@ -31,7 +27,6 @@ public struct ValidationCore {
     
     /// Validate an Base45-encoded EHN health certificate
     public func validate(encodedData: String, _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()) {
-        DDLogInfo("Starting validation")
         guard let unprefixedEncodedString = removeScheme(prefix: PREFIX, from: encodedData) else {
             completionHandler(.failure(.INVALID_SCHEME_PREFIX))
             return
@@ -41,20 +36,17 @@ public struct ValidationCore {
             completionHandler(.failure(.BASE_45_DECODING_FAILED))
             return
         }
-        DDLogDebug("Base45-decoded data: \(decodedData.humanReadable())")
         
         guard let decompressedData = decompress(decodedData) else {
             completionHandler(.failure(.DECOMPRESSION_FAILED))
             return
         }
-        DDLogDebug("Decompressed data: \(decompressedData.humanReadable())")
 
         guard let cose = cose(from: decompressedData) else {
             completionHandler(.failure(.COSE_DESERIALIZATION_FAILED))
             return
         }
         retrieveSignatureCertificate(with: cose.keyId) { cert in
-            DDLogDebug("Encoded signing cert for keyId \(cose.keyId ?? "N/A"): \(cert ?? "N/A")")
             completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: cert), payload: cose.payload.euHealthCert)))
         }
     }
@@ -66,7 +58,6 @@ public struct ValidationCore {
     private func retrieveSignatureCertificate(with keyId: String?, _ completionHandler: @escaping (String?)->()) {
         guard let keyId = keyId,
               let url = URL(string: "\(CERT_SERVICE_URL)\(CERT_PATH)\(keyId)") else {
-            DDLogError("Cannot construct certificate query url.")
             return
         }
 
@@ -77,7 +68,6 @@ public struct ValidationCore {
                   let status = (response as? HTTPURLResponse)?.statusCode,
                   200 == status,
                   let body = body else {
-                DDLogError("Cannot query certificate.")
                 completionHandler(nil)
                 return
             }
@@ -89,7 +79,6 @@ public struct ValidationCore {
     /// Strips a given scheme prefix from the encoded EHN health certificate
     private func removeScheme(prefix: String, from encodedString: String) -> String? {
         guard encodedString.starts(with: prefix) else {
-            DDLogError("Encoded data string does not seem to include scheme prefix: \(encodedString.prefix(prefix.count))")
             return nil
         }
         return String(encodedString.dropFirst(prefix.count))
@@ -116,7 +105,6 @@ public struct ValidationCore {
 
 extension ValidationCore : QrCodeReceiver {
     public func canceled() {
-        DDLogDebug("QR code scanning cancelled.")
         completionHandler?(.failure(.USER_CANCELLED))
     }
     
@@ -124,7 +112,6 @@ extension ValidationCore : QrCodeReceiver {
     public func onQrCodeResult(_ result: String?) {
         guard let result = result,
               let completionHandler = self.completionHandler else {
-            DDLogError("Cannot read QR code.")
             self.completionHandler?(.failure(.QR_CODE_ERROR))
             return
         }
@@ -132,5 +119,80 @@ extension ValidationCore : QrCodeReceiver {
     }
 }
 
+//
+//  Base45.swift
+//  Base45-Swift
+//
+//  Created by Dirk-Willem van Gulik on 01/04/2021.
+//
 
+import Foundation
 
+extension String {
+    enum Base45Error: Error {
+        case Base64InvalidCharacter
+        case Base64InvalidLength
+    }
+    
+    public func fromBase45() throws ->Data  {
+        let BASE45_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"
+        var d = Data()
+        var o = Data()
+        
+        for c in self.uppercased() {
+            if let at = BASE45_CHARSET.firstIndex(of: c) {
+                let idx  = BASE45_CHARSET.distance(from: BASE45_CHARSET.startIndex, to: at)
+                d.append(UInt8(idx))
+            } else {
+                throw Base45Error.Base64InvalidCharacter
+            }
+        }
+        for i in stride(from:0, to:d.count, by: 3) {
+            if (d.count - i < 2) {
+                throw Base45Error.Base64InvalidLength
+            }
+            var x : UInt32 = UInt32(d[i]) + UInt32(d[i+1])*45
+            if (d.count - i >= 3) {
+                x += 45 * 45 * UInt32(d[i+2])
+                if (x >= 256*256) {
+                   throw Base45Error.Base64InvalidCharacter
+                }
+                o.append(UInt8(x / 256))
+            }
+            o.append(UInt8(x % 256))
+        }
+        return o
+    }
+}
+
+extension String {
+    subscript(i: Int) -> String {
+        return String(self[index(startIndex, offsetBy: i)])
+    }
+}
+
+extension Data {
+    public func toBase45()->String {
+        let BASE45_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"
+        var o = String()
+        for i in stride(from:0, to:self.count, by: 2) {
+            if (self.count - i > 1) {
+                let x : Int = (Int(self[i])<<8) + Int(self[i+1])
+                let e : Int = x / (45*45)
+                let x2 : Int = x % (45*45)
+                let d : Int = x2 / 45
+                let c : Int = x2 % 45
+                o.append(BASE45_CHARSET[c])
+                o.append(BASE45_CHARSET[d])
+                o.append(BASE45_CHARSET[e])
+            } else {
+                let x2 : Int = Int(self[i])
+                let d : Int = x2 / 45
+                let c : Int = x2 % 45
+                o.append(BASE45_CHARSET[c])
+                o.append(BASE45_CHARSET[d])
+            }
+        }
+        return o
+    }
+}

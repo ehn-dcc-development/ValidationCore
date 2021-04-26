@@ -7,7 +7,6 @@
 
 import UIKit
 import SwiftCBOR
-import CocoaLumberjackSwift
 import Security
 
 struct Cose {
@@ -58,7 +57,6 @@ struct Cose {
                 let cborArray = CBOR(arrayLiteral: context, header, externalAad, payload.rawPayload)
                 return Data(cborArray.encode())
             default:
-                DDLogError("COSE Sign messages are not yet supported.")
                 return nil
                 
             }
@@ -83,13 +81,11 @@ struct Cose {
 
     func hasValidSignature(for encodedCert: String?) -> Bool {
         guard let encodedCert = encodedCert else {
-            DDLogError("No certificate, assuming COSE is not valid.")
             return false
         }
         guard let encodedCertData = Data(base64Encoded: encodedCert),
               let cert = SecCertificateCreateWithData(nil, encodedCertData as CFData),
               let publicKey = SecCertificateCopyKey(cert) else {
-            DDLogError("Cannot decode certificate.")
             return false
         }
  
@@ -98,14 +94,12 @@ struct Cose {
         case .sign1:
             return hasCoseSign1ValidSignature(for: publicKey)
         default:
-            DDLogError("COSE Sign messages are not yet supported.")
             return false
         }
    }
     
     private func hasCoseSign1ValidSignature(for key: SecKey) -> Bool {
         guard let signedData = signatureStruct else {
-            DDLogError("Cannot create Sign1 structure.")
             return false
         }
         
@@ -123,15 +117,11 @@ struct Cose {
         case .ps256:
             algorithm = .rsaSignatureMessagePSSSHA256
         default:
-            DDLogError("Verification algorithm not supported.")
             return false
         }
  
         var error : Unmanaged<CFError>?
         let result = SecKeyVerifySignature(key, algorithm, signedData as CFData, signature as CFData, &error)
-        if let error = error {
-            DDLogError("Signature verification error: \(error)")
-        }
         return result
     }
 }
