@@ -143,5 +143,4 @@ Implements a very basic validation chain:
 
   spec.dependency "SwiftCBOR"
   spec.dependency "GzipSwift"
-  spec.dependency "base45-swift"
 end
