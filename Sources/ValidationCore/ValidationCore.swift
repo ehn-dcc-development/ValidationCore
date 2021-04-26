@@ -1,5 +1,4 @@
 import base45_swift
-import CocoaLumberjackSwift
 import Gzip
 import UIKit
 
@@ -15,9 +14,7 @@ public struct ValidationCore {
     private var completionHandler : ((Result<ValidationResult, ValidationError>) -> ())?
     private var scanner : QrCodeScanner?
     
-    public init(){
-        DDLog.add(DDOSLogger.sharedInstance)
-    }
+    public init(){}
 
     
     //MARK: - Public API
@@ -31,7 +28,6 @@ public struct ValidationCore {
     
     /// Validate an Base45-encoded EHN health certificate
     public func validate(encodedData: String, _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()) {
-        DDLogInfo("Starting validation")
         guard let unprefixedEncodedString = removeScheme(prefix: PREFIX, from: encodedData) else {
             completionHandler(.failure(.INVALID_SCHEME_PREFIX))
             return
@@ -41,20 +37,17 @@ public struct ValidationCore {
             completionHandler(.failure(.BASE_45_DECODING_FAILED))
             return
         }
-        DDLogDebug("Base45-decoded data: \(decodedData.humanReadable())")
         
         guard let decompressedData = decompress(decodedData) else {
             completionHandler(.failure(.DECOMPRESSION_FAILED))
             return
         }
-        DDLogDebug("Decompressed data: \(decompressedData.humanReadable())")
 
         guard let cose = cose(from: decompressedData) else {
             completionHandler(.failure(.COSE_DESERIALIZATION_FAILED))
             return
         }
         retrieveSignatureCertificate(with: cose.keyId) { cert in
-            DDLogDebug("Encoded signing cert for keyId \(cose.keyId ?? "N/A"): \(cert ?? "N/A")")
             completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: cert), payload: cose.payload.euHealthCert)))
         }
     }
@@ -66,7 +59,6 @@ public struct ValidationCore {
     private func retrieveSignatureCertificate(with keyId: String?, _ completionHandler: @escaping (String?)->()) {
         guard let keyId = keyId,
               let url = URL(string: "\(CERT_SERVICE_URL)\(CERT_PATH)\(keyId)") else {
-            DDLogError("Cannot construct certificate query url.")
             return
         }
 
@@ -77,7 +69,6 @@ public struct ValidationCore {
                   let status = (response as? HTTPURLResponse)?.statusCode,
                   200 == status,
                   let body = body else {
-                DDLogError("Cannot query certificate.")
                 completionHandler(nil)
                 return
             }
@@ -89,7 +80,6 @@ public struct ValidationCore {
     /// Strips a given scheme prefix from the encoded EHN health certificate
     private func removeScheme(prefix: String, from encodedString: String) -> String? {
         guard encodedString.starts(with: prefix) else {
-            DDLogError("Encoded data string does not seem to include scheme prefix: \(encodedString.prefix(prefix.count))")
             return nil
         }
         return String(encodedString.dropFirst(prefix.count))
@@ -116,7 +106,6 @@ public struct ValidationCore {
 
 extension ValidationCore : QrCodeReceiver {
     public func canceled() {
-        DDLogDebug("QR code scanning cancelled.")
         completionHandler?(.failure(.USER_CANCELLED))
     }
     
@@ -124,7 +113,6 @@ extension ValidationCore : QrCodeReceiver {
     public func onQrCodeResult(_ result: String?) {
         guard let result = result,
               let completionHandler = self.completionHandler else {
-            DDLogError("Cannot read QR code.")
             self.completionHandler?(.failure(.QR_CODE_ERROR))
             return
         }
