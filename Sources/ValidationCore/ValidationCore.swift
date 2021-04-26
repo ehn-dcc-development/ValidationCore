@@ -1,5 +1,6 @@
 import Gzip
 import UIKit
+import base45_swift
 
 /// Electronic Health Certificate Validation Core
 ///
