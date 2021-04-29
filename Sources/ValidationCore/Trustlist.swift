@@ -71,6 +71,17 @@ struct TrustEntry : Codable {
             return SecKeyCreateWithData(publicKeyData as CFData, attributes as CFDictionary, nil)
         }
     }
+    
+    func isValid() -> Bool {
+        let now = Date()
+        let validFromDate = Date(timeIntervalSince1970: TimeInterval(validFrom))
+        let validUntilDate = Date(timeIntervalSince1970: TimeInterval(validUntil))
+        guard now.isAfter(validFromDate),
+              now.isBefore(validUntilDate) else {
+            return false
+        }
+        return true
+    }
 }
 
 public enum CertType : String, Codable {

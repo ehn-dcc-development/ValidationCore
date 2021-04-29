@@ -19,7 +19,8 @@ public enum ValidationError : Error, Equatable {
     case USER_CANCELLED
     case TRUST_SERVICE_ERROR
     case KEY_NOT_IN_TRUST_LIST
-    case UNSUITABLE_KEY_TYPE
+    case PUBLIC_KEY_EXPIRED
+    case UNSUITABLE_PUBLIC_KEY_TYPE
     case KEY_CREATION_ERROR
     case KEYSTORE_ERROR(cause: String)
     
@@ -37,7 +38,8 @@ public enum ValidationError : Error, Equatable {
         case .USER_CANCELLED: return "User cancelled"
         case .TRUST_SERVICE_ERROR: return "Trust service error"
         case .KEY_NOT_IN_TRUST_LIST: return "Key not in trust list"
-        case .UNSUITABLE_KEY_TYPE: return "Key unsuitable for EHN certificate type"
+        case .PUBLIC_KEY_EXPIRED: return "Public key expired"
+        case .UNSUITABLE_PUBLIC_KEY_TYPE: return "Key unsuitable for EHN certificate type"
         case .KEY_CREATION_ERROR: return "Cannot create key from data"
         case .KEYSTORE_ERROR(let cause): return cause
         }

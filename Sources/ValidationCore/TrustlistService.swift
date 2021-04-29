@@ -67,8 +67,12 @@ class TrustlistService {
             completionHandler(.failure(.KEY_NOT_IN_TRUST_LIST))
             return
         }
+        guard entry.isValid() else {
+            completionHandler(.failure(.PUBLIC_KEY_EXPIRED))
+            return
+        }
         guard entry.isSuitable(for: keyType) else {
-            completionHandler(.failure(.UNSUITABLE_KEY_TYPE))
+            completionHandler(.failure(.UNSUITABLE_PUBLIC_KEY_TYPE))
             return
         }
         guard let secKey = entry.publicKey else {
