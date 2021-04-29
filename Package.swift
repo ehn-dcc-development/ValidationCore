@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "ValidationCore",
     platforms: [
-        .iOS(.v12),
+        .iOS(.v13),
     ],
     products: [
         .library(

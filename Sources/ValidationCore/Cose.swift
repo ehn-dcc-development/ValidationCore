@@ -14,10 +14,10 @@ struct Cose {
     private let type: CoseType
     let protectedHeader : CoseHeader
     let unprotectedHeader : CoseHeader?
-    let payload : CWT
+    let payload : CBOR
     let signature : Data
     
-    var keyId : String? {
+    var keyId : Data? {
         get {
             var keyData : Data?
             if let unprotectedKeyId = unprotectedHeader?.keyId {
@@ -26,7 +26,7 @@ struct Cose {
             if let protectedKeyId = protectedHeader.keyId {
                 keyData = Data(protectedKeyId)
             }
-            return keyData?.base64UrlEncodedString()
+            return keyData
         }
     }
     
@@ -55,7 +55,7 @@ struct Cose {
             case .sign1:
                 let context = CBOR(stringLiteral: self.type.rawValue)
                 let externalAad = CBOR.byteString([UInt8]()) /*no external application specific data*/
-                let cborArray = CBOR(arrayLiteral: context, header, externalAad, payload.rawPayload)
+                let cborArray = CBOR(arrayLiteral: context, header, externalAad, payload)
                 return Data(cborArray.encode())
             default:
                 DDLogError("COSE Sign messages are not yet supported.")
@@ -70,29 +70,17 @@ struct Cose {
         guard let cose = try? CBORDecoder(input: data.bytes).decodeItem()?.asCose(),
               let type = CoseType.from(tag: cose.0),
               let protectedHeader = CoseHeader(fromBytestring: cose.1[0]),
-              let payload = CWT(from: cose.1[2]),
               let signature = cose.1[3].asBytes() else {
             return nil
         }
         self.type = type
         self.protectedHeader = protectedHeader
         self.unprotectedHeader = CoseHeader(from: cose.1[1])
-        self.payload = payload
+        self.payload = cose.1[2]
         self.signature = Data(signature)
     }
 
-    func hasValidSignature(for encodedCert: String?) -> Bool {
-        guard let encodedCert = encodedCert else {
-            DDLogError("No certificate, assuming COSE is not valid.")
-            return false
-        }
-        guard let encodedCertData = Data(base64Encoded: encodedCert),
-              let cert = SecCertificateCreateWithData(nil, encodedCertData as CFData),
-              let publicKey = SecCertificateCopyKey(cert) else {
-            DDLogError("Cannot decode certificate.")
-            return false
-        }
- 
+    func hasValidSignature(for publicKey: SecKey) -> Bool {
         /* Only supporting Sign1 messages for the moment */
         switch type {
         case .sign1:
@@ -108,8 +96,6 @@ struct Cose {
             DDLogError("Cannot create Sign1 structure.")
             return false
         }
-        
-
         return verifySignature(key: key, signedData: signedData, rawSignature: signature)
     }
     
@@ -137,7 +123,6 @@ struct Cose {
 }
 
 struct CWT {
-    fileprivate let rawPayload : CBOR
     let iss : String?
     let exp : UInt64?
     let iat : UInt64?
@@ -158,17 +143,15 @@ struct CWT {
         guard let decodedPayload = cbor.decodeBytestring()?.asMap() else {
            return nil
         }
-        rawPayload = cbor
         iss = decodedPayload[PayloadKeys.iss]?.asString()
         exp = decodedPayload[PayloadKeys.exp]?.asUInt64()
         iat = decodedPayload[PayloadKeys.iat]?.asUInt64()
         guard let hCertMap = decodedPayload[PayloadKeys.hcert]?.asMap(),
               let certData = hCertMap[PayloadKeys.HcertKeys.euHealthCertV1],
-              let euHealthCert = EuHealthCert(from: certData) else {
+              let healthCert = EuHealthCert(from: certData) else {
             return nil
         }
-        
-        self.euHealthCert = euHealthCert
+        self.euHealthCert = healthCert
     }
 }
 

@@ -15,6 +15,19 @@ public struct EuHealthCert : Codable {
     public let vaccinations: [Vaccination]?
     public let pastInfections: [PastInfection]?
     public let tests: [Test]?
+    
+    var type : CertType {
+        get {
+            switch self {
+            case _ where nil != vaccinations:
+                return .vaccination
+            case _ where nil != pastInfections:
+                return .recovery
+            default:
+                return .test
+            }
+        }
+   }
 
     private enum CodingKeys : String, CodingKey {
         case person = "nam"

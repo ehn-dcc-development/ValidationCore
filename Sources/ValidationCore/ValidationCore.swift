@@ -14,10 +14,11 @@ public struct ValidationCore {
     
     private var completionHandler : ((Result<ValidationResult, ValidationError>) -> ())?
     private var scanner : QrCodeScanner?
+    private let trustlistService = TrustlistService()
     
     public init(){
         DDLog.add(DDOSLogger.sharedInstance)
-    }
+   }
 
     
     //MARK: - Public API
@@ -49,20 +50,28 @@ public struct ValidationCore {
         }
         DDLogDebug("Decompressed data: \(decompressedData.humanReadable())")
 
-        guard let cose = cose(from: decompressedData) else {
+        guard let cose = cose(from: decompressedData),
+              let cwt = CWT(from: cose.payload),
+              let keyId = cose.keyId else {
             completionHandler(.failure(.COSE_DESERIALIZATION_FAILED))
             return
         }
-        retrieveSignatureCertificate(with: cose.keyId) { cert in
-            DDLogDebug("Encoded signing cert for keyId \(cose.keyId ?? "N/A"): \(cert ?? "N/A")")
-            completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: cert), payload: cose.payload.euHealthCert)))
+        trustlistService.key(for: keyId, keyType: cwt.euHealthCert.type) { result in
+            switch result {
+            case .success(let key): completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: key), payload: cwt.euHealthCert)))
+            case .failure(let error): completionHandler(.failure(error))
+            }
         }
+//        retrieveSignatureCertificate(with: cose.keyId) { cert in
+//            DDLogDebug("Encoded signing cert for keyId \(cose.keyId ?? "N/A"): \(cert ?? "N/A")")
+//            completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: cert), payload: cwt.euHealthCert)))
+//        }
     }
     
 
     //MARK: - Helper Functions
     
-    /// Retrieves the signature certificate for a given keyId
+    /*/// Retrieves the signature certificate for a given keyId
     private func retrieveSignatureCertificate(with keyId: String?, _ completionHandler: @escaping (String?)->()) {
         guard let keyId = keyId,
               let url = URL(string: "\(CERT_SERVICE_URL)\(CERT_PATH)\(keyId)") else {
@@ -84,7 +93,7 @@ public struct ValidationCore {
             let encodedCert = String(data: body, encoding: .utf8)
             completionHandler(encodedCert)
         }.resume()
-    }
+    }*/
     
     /// Strips a given scheme prefix from the encoded EHN health certificate
     private func removeScheme(prefix: String, from encodedString: String) -> String? {
