@@ -30,21 +30,7 @@ struct Cose {
         }
     }
     
-    enum CoseType : String {
-        case sign1 = "Signature1"
-        case sign = "Signature"
-        
-        static func from(tag: CBOR.Tag) -> CoseType? {
-            switch tag {
-            case .coseSign1Item: return .sign1
-            case .coseSignItem: return .sign
-            default:
-                return nil
-            }
-        }
-    }
-
-    private var signatureStruct : Data? {
+   private var signatureStruct : Data? {
         get {
             guard let header = protectedHeader.rawHeader else {
                 return nil
@@ -60,9 +46,7 @@ struct Cose {
             default:
                 DDLogError("COSE Sign messages are not yet supported.")
                 return nil
-                
             }
-
         }
     }
     
@@ -79,7 +63,7 @@ struct Cose {
         self.payload = cose.1[2]
         self.signature = Data(signature)
     }
-
+    
     func hasValidSignature(for publicKey: SecKey) -> Bool {
         /* Only supporting Sign1 messages for the moment */
         switch type {
@@ -89,7 +73,7 @@ struct Cose {
             DDLogError("COSE Sign messages are not yet supported.")
             return false
         }
-   }
+    }
     
     private func hasCoseSign1ValidSignature(for key: SecKey) -> Bool {
         guard let signedData = signatureStruct else {
@@ -112,7 +96,7 @@ struct Cose {
             DDLogError("Verification algorithm not supported.")
             return false
         }
- 
+        
         var error : Unmanaged<CFError>?
         let result = SecKeyVerifySignature(key, algorithm, signedData as CFData, signature as CFData, &error)
         if let error = error {
@@ -120,77 +104,61 @@ struct Cose {
         }
         return result
     }
-}
-
-struct CWT {
-    let iss : String?
-    let exp : UInt64?
-    let iat : UInt64?
-    let euHealthCert : EuHealthCert
     
-    enum PayloadKeys : Int {
-        case iss = 1
-        case iat = 6
-        case exp = 4
-        case hcert = -260
+    // MARK: - Nested Types
+    
+    struct CoseHeader {
+        fileprivate let rawHeader : CBOR?
+        let keyId : [UInt8]?
+        let algorithm : Algorithm?
         
-        enum HcertKeys : Int {
-            case euHealthCertV1 = 1
+        enum Headers : Int {
+            case keyId = 4
+            case algorithm = 1
+        }
+        
+        enum Algorithm : UInt64 {
+            case es256 = 6 //-7
+            case ps256 = 36 //-37
+        }
+        
+        init?(fromBytestring cbor: CBOR){
+            guard let cborMap = cbor.decodeBytestring()?.asMap(),
+                  let algValue = cborMap[Headers.algorithm]?.asUInt64(),
+                  let alg = Algorithm(rawValue: algValue) else {
+                return nil
+            }
+            self.init(alg: alg, keyId: cborMap[Headers.keyId]?.asBytes(), rawHeader: cbor)
+        }
+        
+        init?(from cbor: CBOR) {
+            let cborMap = cbor.asMap()
+            var alg : Algorithm?
+            if let algValue = cborMap?[Headers.algorithm]?.asUInt64() {
+                alg = Algorithm(rawValue: algValue)
+            }
+            self.init(alg: alg, keyId: cborMap?[Headers.keyId]?.asBytes())
+        }
+        
+        private init(alg: Algorithm?, keyId: [UInt8]?, rawHeader : CBOR? = nil){
+            self.algorithm = alg
+            self.keyId = keyId
+            self.rawHeader = rawHeader
         }
     }
-
-    init?(from cbor: CBOR) {
-        guard let decodedPayload = cbor.decodeBytestring()?.asMap() else {
-           return nil
+    
+    enum CoseType : String {
+        case sign1 = "Signature1"
+        case sign = "Signature"
+        
+        static func from(tag: CBOR.Tag) -> CoseType? {
+            switch tag {
+            case .coseSign1Item: return .sign1
+            case .coseSignItem: return .sign
+            default:
+                return nil
+            }
         }
-        iss = decodedPayload[PayloadKeys.iss]?.asString()
-        exp = decodedPayload[PayloadKeys.exp]?.asUInt64()
-        iat = decodedPayload[PayloadKeys.iat]?.asUInt64()
-        guard let hCertMap = decodedPayload[PayloadKeys.hcert]?.asMap(),
-              let certData = hCertMap[PayloadKeys.HcertKeys.euHealthCertV1],
-              let healthCert = EuHealthCert(from: certData) else {
-            return nil
-        }
-        self.euHealthCert = healthCert
     }
 }
 
-struct CoseHeader {
-    fileprivate let rawHeader : CBOR?
-    let keyId : [UInt8]?
-    let algorithm : Algorithm?
-
-    enum Headers : Int {
-        case keyId = 4
-        case algorithm = 1
-    }
-    
-    enum Algorithm : UInt64 {
-        case es256 = 6 //-7
-        case ps256 = 36 //-37
-    }
-
-    init?(fromBytestring cbor: CBOR){
-        guard let cborMap = cbor.decodeBytestring()?.asMap(),
-              let algValue = cborMap[Headers.algorithm]?.asUInt64(),
-              let alg = Algorithm(rawValue: algValue) else {
-            return nil
-        }
-        self.init(alg: alg, keyId: cborMap[Headers.keyId]?.asBytes(), rawHeader: cbor)
-    }
-    
-    init?(from cbor: CBOR) {
-        let cborMap = cbor.asMap()
-        var alg : Algorithm?
-        if let algValue = cborMap?[Headers.algorithm]?.asUInt64() {
-             alg = Algorithm(rawValue: algValue)
-        }
-        self.init(alg: alg, keyId: cborMap?[Headers.keyId]?.asBytes())
-    }
-    
-    private init(alg: Algorithm?, keyId: [UInt8]?, rawHeader : CBOR? = nil){
-        self.algorithm = alg
-        self.keyId = keyId
-        self.rawHeader = rawHeader
-    }
-}

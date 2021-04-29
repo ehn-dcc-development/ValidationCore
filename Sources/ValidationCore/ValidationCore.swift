@@ -20,7 +20,6 @@ public struct ValidationCore {
         DDLog.add(DDOSLogger.sharedInstance)
    }
 
-    
     //MARK: - Public API
     
     /// Instantiate a QR code scanner and validate the scannned EHN health certificate
@@ -62,39 +61,11 @@ public struct ValidationCore {
             case .failure(let error): completionHandler(.failure(error))
             }
         }
-//        retrieveSignatureCertificate(with: cose.keyId) { cert in
-//            DDLogDebug("Encoded signing cert for keyId \(cose.keyId ?? "N/A"): \(cert ?? "N/A")")
-//            completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: cert), payload: cwt.euHealthCert)))
-//        }
     }
     
 
     //MARK: - Helper Functions
-    
-    /*/// Retrieves the signature certificate for a given keyId
-    private func retrieveSignatureCertificate(with keyId: String?, _ completionHandler: @escaping (String?)->()) {
-        guard let keyId = keyId,
-              let url = URL(string: "\(CERT_SERVICE_URL)\(CERT_PATH)\(keyId)") else {
-            DDLogError("Cannot construct certificate query url.")
-            return
-        }
 
-        var request = URLRequest(url: url)
-        request.addValue("text/plain", forHTTPHeaderField: "Accept")
-        URLSession.shared.dataTask(with: request) { body, response, error in
-            guard error == nil,
-                  let status = (response as? HTTPURLResponse)?.statusCode,
-                  200 == status,
-                  let body = body else {
-                DDLogError("Cannot query certificate.")
-                completionHandler(nil)
-                return
-            }
-            let encodedCert = String(data: body, encoding: .utf8)
-            completionHandler(encodedCert)
-        }.resume()
-    }*/
-    
     /// Strips a given scheme prefix from the encoded EHN health certificate
     private func removeScheme(prefix: String, from encodedString: String) -> String? {
         guard encodedString.starts(with: prefix) else {

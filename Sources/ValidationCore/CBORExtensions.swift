@@ -53,6 +53,10 @@ extension CBOR {
         return self.unwrap() as? [UInt8]
     }
     
+    func asData() -> Data {
+        return Data(self.encode())
+    }
+    
     func asCose() -> (CBOR.Tag, [CBOR])? {
         guard let rawCose =  self.unwrap() as? (CBOR.Tag, CBOR),
               let cosePayload = rawCose.1.asList() else {
