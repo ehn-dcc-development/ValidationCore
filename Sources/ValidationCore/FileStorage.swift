@@ -77,7 +77,7 @@ fileprivate extension FileManager {
                 try createDirectory(atPath: dir, withIntermediateDirectories: true, attributes: nil)
             }
             catch (let e){
-                DDLogError(e)
+                print(e)
             }
         }
     }
