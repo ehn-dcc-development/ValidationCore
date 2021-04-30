@@ -17,7 +17,7 @@ Implements a very basic validation chain:
   spec.homepage     = "https://github.com/HannesVDB/ValidationCore"
   spec.license      = "Apache License"
   spec.authors            = { "Hannes Van den Berghe" => "hannes.vandenberghe@icapps.com" }
-  spec.ios.deployment_target = "12.0"
+  spec.ios.deployment_target = "13.0"
   spec.swift_version = '5.0'
   spec.source       = { :git => "https://github.com/HannesVDB/ValidationCore.git", :tag => "#{spec.version}" }
   spec.source_files  = "Sources/**/*.{swift}"

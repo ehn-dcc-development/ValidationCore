@@ -95,16 +95,16 @@ class TrustlistService {
     
     private func storeTrustlist(){
         guard let trustlistData = try? JSONEncoder().encode(self.cachedTrustlist) else {
-            DDLogError("Cannot encode trustlist for storing")
+            print("Cannot encode trustlist for storing")
             return
         }
         CryptoService.createKeyAndEncrypt(data: trustlistData, with: self.TRUSTLIST_KEY_ALIAS, completionHandler: { result in
             switch result {
             case .success(let data):
                 if !self.fileStorage.writeProtectedFileToDisk(fileData: data, with: self.TRUSTLIST_FILENAME) {
-                    DDLogError("Cannot write trustlist to disk")
+                    print("Cannot write trustlist to disk")
                 }
-            case .failure(let error): DDLogError(error)
+            case .failure(let error): print(error)
             }
         })
     }
@@ -118,7 +118,7 @@ class TrustlistService {
                        trustlist.isValid() {
                         self.cachedTrustlist = trustlist
                     }
-                case .failure(let error): DDLogError("Cannot load cached trust list: \(error)")
+                case .failure(let error): print("Cannot load cached trust list: \(error)")
                 }
             }
         }
