@@ -17,7 +17,7 @@ public enum ValidationError : Error, Equatable {
     case QR_CODE_ERROR
     case CERTIFICATE_QUERY_FAILED
     case USER_CANCELLED
-    case TRUST_SERVICE_ERROR
+    case TRUST_SERVICE_ERROR(cause: String)
     case KEY_NOT_IN_TRUST_LIST
     case PUBLIC_KEY_EXPIRED
     case UNSUITABLE_PUBLIC_KEY_TYPE
@@ -36,7 +36,7 @@ public enum ValidationError : Error, Equatable {
         case .QR_CODE_ERROR: return "QR code error"
         case .CERTIFICATE_QUERY_FAILED: return "Signing certificate query failed"
         case .USER_CANCELLED: return "User cancelled"
-        case .TRUST_SERVICE_ERROR: return "Trust service error"
+        case .TRUST_SERVICE_ERROR(let cause): return cause
         case .KEY_NOT_IN_TRUST_LIST: return "Key not in trust list"
         case .PUBLIC_KEY_EXPIRED: return "Public key expired"
         case .UNSUITABLE_PUBLIC_KEY_TYPE: return "Key unsuitable for EHN certificate type"

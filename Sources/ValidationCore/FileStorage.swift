@@ -8,19 +8,19 @@
 import Foundation
 import CocoaLumberjackSwift
 
-struct FileStorage {
+public struct FileStorage {
     private let STORAGE_DIR : String
     private let fm = FileManager.default
-
-    init(){
+    
+    public init(){
         self.init(storageDir: "")
     }
     
-    init(storageDir: String) {
+    public init(storageDir: String) {
         STORAGE_DIR = storageDir
     }
     
-    func writeProtectedFileToDisk(fileData: Data, with filename: String) -> Bool {
+    public func writeProtectedFileToDisk(fileData: Data, with filename: String) -> Bool {
         guard var filepath = fileUrl(from: filename) else {
             return false
         }
@@ -34,17 +34,16 @@ struct FileStorage {
         return true
     }
     
-    func loadProtectedFileFromDisk(with filename: String) -> Data? {
+    public func loadProtectedFileFromDisk(with filename: String) -> Data? {
         guard let filepath = certDirPath?.appending("/\(filename)") else {
             return nil
         }
         return fm.contents(atPath: filepath)
     }
     
-    func deleteFiles(with filenames: [String]){
-        let filepath = filenames.compactMap {filename in self.certDirPath?.appending("/\(filename)")}
-        for path in filepath {
-            try? fm.removeItem(atPath: path)
+    public func deleteFile(with filename: String){
+        if let filepath = certDirPath?.appending("/\(filename)") {
+            try? fm.removeItem(atPath: filepath)
         }
     }
     
@@ -60,7 +59,7 @@ struct FileStorage {
     
     private func fileUrl(from filename: String) -> URL? {
         guard let certDirPath = certDirPath else {
-                    return nil
+            return nil
         }
         return URL(fileURLWithPath: certDirPath.appending("/\(filename)"))
     }

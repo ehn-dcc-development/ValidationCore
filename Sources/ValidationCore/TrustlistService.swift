@@ -37,9 +37,10 @@ class TrustlistService {
         }
     }
     
-    private func updateTrustlist(completionHandler: @escaping (Error?)->()) {
+    func updateTrustlist(completionHandler: @escaping (ValidationError?)->()) {
         guard let url = URL(string: "\(CERT_SERVICE_URL)\(TRUST_LIST_PATH)") else {
             DDLogError("Cannot construct certificate query url.")
+            completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot construct service url."))
             return
         }
         
@@ -50,12 +51,12 @@ class TrustlistService {
                   let status = (response as? HTTPURLResponse)?.statusCode,
                   200 == status,
                   let body = body else {
-                DDLogError("Cannot query certificate.")
-                completionHandler(nil)
+                DDLogError("Cannot query trustlist service")
+                completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot renew trustlist: \(error?.localizedDescription)"))
                 return
             }
             guard self.refreshTrustlist(from: body) else {
-                completionHandler(ValidationError.TRUST_SERVICE_ERROR)
+                completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot create valid trustlist from response body"))
                 return
             }
             completionHandler(nil)

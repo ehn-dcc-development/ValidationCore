@@ -23,10 +23,10 @@ public struct ValidationCore {
     //MARK: - Public API
     
     /// Instantiate a QR code scanner and validate the scannned EHN health certificate
-    public mutating func validateQrCode(_ vc : UIViewController, prompt: String = "Scan QR Code", _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()){
+    public mutating func validateQrCode(_ qrView : UIView, _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()){
         self.completionHandler = completionHandler
         self.scanner = QrCodeScanner()
-        scanner?.scan(vc, prompt, self)
+        scanner?.scan(qrView, self)
     }
     
     /// Validate an Base45-encoded EHN health certificate
@@ -62,6 +62,11 @@ public struct ValidationCore {
             }
         }
     }
+
+    public func updateTrustlist(completionHandler: @escaping (ValidationError?)->()) {
+        trustlistService.updateTrustlist(completionHandler: completionHandler)
+    }
+
     
 
     //MARK: - Helper Functions
