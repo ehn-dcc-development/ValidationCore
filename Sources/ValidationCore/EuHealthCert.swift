@@ -15,6 +15,19 @@ public struct EuHealthCert : Codable {
     public let vaccinations: [Vaccination]?
     public let pastInfections: [PastInfection]?
     public let tests: [Test]?
+    
+    var type : CertType {
+        get {
+            switch self {
+            case _ where nil != vaccinations:
+                return .vaccination
+            case _ where nil != pastInfections:
+                return .recovery
+            default:
+                return .test
+            }
+        }
+   }
 
     private enum CodingKeys : String, CodingKey {
         case person = "nam"
@@ -25,20 +38,14 @@ public struct EuHealthCert : Codable {
         case version = "ver"
     }
  
-    init?(from cbor: CBOR) {
-       guard let cbor = cbor.asMap(),
-              let person = Person(from: cbor[CodingKeys.person]),
-              let dateOfBirth = cbor[CodingKeys.dateOfBirth]?.asString(),
-              let version = cbor[CodingKeys.version]?.asString() else {
-            return nil
-        }
-              
-        self.person = person
-        self.dateOfBirth = dateOfBirth
-        self.version = version
-        vaccinations = (cbor[CodingKeys.vaccinations]?.asList())?.compactMap { Vaccination(from: $0) } ?? nil
-        pastInfections = (cbor[CodingKeys.pastInfections]?.asList())?.compactMap { PastInfection(from: $0) } ?? nil
-        tests = (cbor[CodingKeys.tests]?.asList())?.compactMap { Test(from: $0) } ?? nil
+   public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.person = try container.decode(Person.self, forKey: .person)
+        self.version = try container.decode(String.self, forKey: .version)
+        self.dateOfBirth = try container.decode(String.self, forKey: .dateOfBirth)
+        self.vaccinations = try? container.decode([Vaccination].self, forKey: .vaccinations)
+        self.tests = try? container.decode([Test].self, forKey: .tests)
+        self.pastInfections = try? container.decode([PastInfection].self, forKey: .pastInfections)
     }
 }
 
@@ -53,18 +60,6 @@ public struct Person : Codable {
         case standardizedGivenName = "gnt"
         case familyName = "fn"
         case standardizedFamilyName = "fnt"
-    }
- 
-    init?(from cbor: CBOR?) {
-        guard let cbor = cbor?.asMap(),
-              let standardizedFamilyName = cbor[CodingKeys.standardizedFamilyName]?.asString()
-              else {
-            return nil
-        }
-        self.standardizedFamilyName = standardizedFamilyName
-        givenName = cbor[CodingKeys.givenName]?.asString()
-        familyName = cbor[CodingKeys.familyName]?.asString()
-        standardizedGivenName = cbor[CodingKeys.standardizedGivenName]?.asString()
     }
 }
 
@@ -91,32 +86,6 @@ public struct Vaccination : Codable {
            case country = "co"
         case certificateIssuer = "is"
         case certificateIdentifier = "ci"
-    }
-       
-    init?(from cbor: CBOR?) {
-       guard let cbor = cbor?.asMap(),
-         let disease = cbor[CodingKeys.disease]?.asString(),
-         let vaccine = cbor[CodingKeys.vaccine]?.asString(),
-         let medicinialProduct = cbor[CodingKeys.medicinialProduct]?.asString(),
-         let marketingAuthorizationHolder = cbor[CodingKeys.marketingAuthorizationHolder]?.asString(),
-         let doseNumber = cbor[CodingKeys.doseNumber]?.asUInt64(),
-         let totalDoses = cbor[CodingKeys.totalDoses]?.asUInt64(),
-         let vaccinationDate = cbor[CodingKeys.vaccinationDate]?.asString(),
-         let country = cbor[CodingKeys.country]?.asString(),
-         let certIssuer = cbor[CodingKeys.certificateIssuer]?.asString(),
-         let certIdentifier = cbor[CodingKeys.certificateIdentifier]?.asString() else {
-            return nil
-        }
-        self.disease = disease
-        self.vaccine = vaccine
-        self.medicinialProduct = medicinialProduct
-        self.marketingAuthorizationHolder = marketingAuthorizationHolder
-        self.doseNumber = doseNumber
-        self.totalDoses = totalDoses
-        self.vaccinationDate = vaccinationDate
-        self.country = country
-        self.certificateIssuer = certIssuer
-        self.certificateIdentifier = certIdentifier
     }
 }
 
@@ -146,32 +115,6 @@ public struct Test : Codable {
         case certificateIssuer = "is"
         case certificateIdentifier = "ci"
     }
-    
-    init?(from cbor: CBOR?) {
-       guard let cbor = cbor?.asMap(),
-              let disease = cbor[CodingKeys.disease]?.asString(),
-              let type = cbor[CodingKeys.type]?.asString(),
-              let timestampSample = cbor[CodingKeys.timestampSample]?.asUInt64(),
-              let result = cbor[CodingKeys.result]?.asString(),
-              let testCenter = cbor[CodingKeys.testCenter]?.asString(),
-              let country = cbor[CodingKeys.country]?.asString(),
-              let certIssuer = cbor[CodingKeys.certificateIssuer]?.asString(),
-              let certIdentifier = cbor[CodingKeys.certificateIdentifier]?.asString() else {
-            return nil
-        }
-        
-        self.disease = disease
-        self.type = type
-        self.timestampSample = timestampSample
-        self.result = result
-        self.testCenter = testCenter
-        self.country = country
-        self.certificateIssuer = certIssuer
-        self.certificateIdentifier = certIdentifier
-        manufacturer = cbor[CodingKeys.manufacturer]?.asString()
-        testName = cbor[CodingKeys.testName]?.asString()
-        timestampResult = cbor[CodingKeys.timestampResult]?.asUInt64()
-    }
 }
 
 public struct PastInfection : Codable {
@@ -192,24 +135,5 @@ public struct PastInfection : Codable {
         case validUntil = "du"
         case certificateIdentifier = "ci"
     }
-    
-    init?(from cbor: CBOR?) {
-        guard let cbor = cbor?.asMap(),
-              let disease = cbor[CodingKeys.disease]?.asString(),
-              let countryOfTest = cbor[CodingKeys.countryOfTest]?.asString(),
-              let dateFirstPositiveTest = cbor[CodingKeys.dateFirstPositiveTest]?.asString(),
-              let certIssuer = cbor[CodingKeys.certificateIssuer]?.asString(),
-              let validFrom = cbor[CodingKeys.validFrom]?.asString(),
-              let validUntil = cbor[CodingKeys.validUntil]?.asString(),
-              let certIdentifier = cbor[CodingKeys.certificateIdentifier]?.asString() else {
-            return nil
-        }
-        self.disease = disease
-        self.countryOfTest = countryOfTest
-        self.dateFirstPositiveTest = dateFirstPositiveTest
-        self.certificateIssuer = certIssuer
-        self.certificateIdentifier = certIdentifier
-        self.validFrom = validFrom
-        self.validUntil = validUntil
-    }
 }
+

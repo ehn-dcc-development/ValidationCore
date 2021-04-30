@@ -1,6 +1,5 @@
 import Foundation
 import AVFoundation
-import UIKit
 
 public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     var captureSession: AVCaptureSession!
@@ -47,6 +46,7 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
                         self.setup(viewController, qrPrompt)
                     }
                 } else {
+                    print("User has denied permission to use camera")
                     DispatchQueue.global(qos: .background).async {
                         self.qrCodeReceiver?.canceled()
                     }
@@ -58,6 +58,7 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     func setup(_ viewController: UIViewController, _ qrPrompt: String) {
         guard let captureDevice = AVCaptureDevice.default(for: AVMediaType.video),
               let captureDeviceInput = try? AVCaptureDeviceInput(device: captureDevice) else {
+            print("Could not get AVCaptureDevice")
             DispatchQueue.global(qos: .background).async {
                 self.qrCodeReceiver?.canceled()
             }
@@ -67,6 +68,7 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         baseView.frame = viewController.view.frame
         captureSession = AVCaptureSession()
         if !captureSession.canAddInput(captureDeviceInput) {
+            print("Could not start AVCaptureSession")
             DispatchQueue.global(qos: .background).async {
                 self.qrCodeReceiver?.canceled()
             }
@@ -153,6 +155,7 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     @objc
     public func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject],
                                from connection: AVCaptureConnection) {
+        print("Detected QRCode")
         guard let metadataObject = metadataObjects.first,
             let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject,
             let stringValue = readableObject.stringValue else {
@@ -161,6 +164,7 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         baseView.removeFromSuperview()
         qrCodeFrameView.frame = readableObject.bounds
         captureSession.stopRunning()
+        print("Detected QRCode with value \(stringValue)")
         videoPreviewLayer.removeFromSuperlayer()
         NotificationCenter.default.removeObserver(self)
         DispatchQueue.global(qos: .background).async {

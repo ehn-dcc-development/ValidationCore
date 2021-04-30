@@ -1,6 +1,6 @@
+import base45_swift
 import Gzip
 import UIKit
-import base45_swift
 
 /// Electronic Health Certificate Validation Core
 ///
@@ -13,10 +13,11 @@ public struct ValidationCore {
     
     private var completionHandler : ((Result<ValidationResult, ValidationError>) -> ())?
     private var scanner : QrCodeScanner?
+    private let trustlistService = TrustlistService()
     
-    public init(){}
+    public init(){
+   }
 
-    
     //MARK: - Public API
     
     /// Instantiate a QR code scanner and validate the scannned EHN health certificate
@@ -28,6 +29,7 @@ public struct ValidationCore {
     
     /// Validate an Base45-encoded EHN health certificate
     public func validate(encodedData: String, _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()) {
+        print("Starting validation")
         guard let unprefixedEncodedString = removeScheme(prefix: PREFIX, from: encodedData) else {
             completionHandler(.failure(.INVALID_SCHEME_PREFIX))
             return
@@ -37,49 +39,35 @@ public struct ValidationCore {
             completionHandler(.failure(.BASE_45_DECODING_FAILED))
             return
         }
+        print("Base45-decoded data: \(decodedData.humanReadable())")
         
         guard let decompressedData = decompress(decodedData) else {
             completionHandler(.failure(.DECOMPRESSION_FAILED))
             return
         }
+        print("Decompressed data: \(decompressedData.humanReadable())")
 
-        guard let cose = cose(from: decompressedData) else {
+        guard let cose = cose(from: decompressedData),
+              let cwt = CWT(from: cose.payload),
+              let keyId = cose.keyId else {
             completionHandler(.failure(.COSE_DESERIALIZATION_FAILED))
             return
         }
-        retrieveSignatureCertificate(with: cose.keyId) { cert in
-            completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: cert), payload: cose.payload.euHealthCert)))
+        trustlistService.key(for: keyId, keyType: cwt.euHealthCert.type) { result in
+            switch result {
+            case .success(let key): completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: key), payload: cwt.euHealthCert)))
+            case .failure(let error): completionHandler(.failure(error))
+            }
         }
     }
     
 
     //MARK: - Helper Functions
-    
-    /// Retrieves the signature certificate for a given keyId
-    private func retrieveSignatureCertificate(with keyId: String?, _ completionHandler: @escaping (String?)->()) {
-        guard let keyId = keyId,
-              let url = URL(string: "\(CERT_SERVICE_URL)\(CERT_PATH)\(keyId)") else {
-            return
-        }
 
-        var request = URLRequest(url: url)
-        request.addValue("text/plain", forHTTPHeaderField: "Accept")
-        URLSession.shared.dataTask(with: request) { body, response, error in
-            guard error == nil,
-                  let status = (response as? HTTPURLResponse)?.statusCode,
-                  200 == status,
-                  let body = body else {
-                completionHandler(nil)
-                return
-            }
-            let encodedCert = String(data: body, encoding: .utf8)
-            completionHandler(encodedCert)
-        }.resume()
-    }
-    
     /// Strips a given scheme prefix from the encoded EHN health certificate
     private func removeScheme(prefix: String, from encodedString: String) -> String? {
         guard encodedString.starts(with: prefix) else {
+            print("Encoded data string does not seem to include scheme prefix: \(encodedString.prefix(prefix.count))")
             return nil
         }
         return String(encodedString.dropFirst(prefix.count))
@@ -106,6 +94,7 @@ public struct ValidationCore {
 
 extension ValidationCore : QrCodeReceiver {
     public func canceled() {
+        print("QR code scanning cancelled.")
         completionHandler?(.failure(.USER_CANCELLED))
     }
     
@@ -113,9 +102,13 @@ extension ValidationCore : QrCodeReceiver {
     public func onQrCodeResult(_ result: String?) {
         guard let result = result,
               let completionHandler = self.completionHandler else {
+            print("Cannot read QR code.")
             self.completionHandler?(.failure(.QR_CODE_ERROR))
             return
         }
         validate(encodedData: result, completionHandler)
     }
 }
+
+
+

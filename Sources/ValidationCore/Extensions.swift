@@ -7,7 +7,7 @@
 
 import Foundation
 
-extension Data{
+extension Data {
     func humanReadable() -> String {
         return self.map { String(format: "%02x ", $0) }.joined()
     }
@@ -22,5 +22,14 @@ extension Data{
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
             .replacingOccurrences(of: "\n", with: "")
+    }
+}
+
+extension Date {
+    func isBefore(_ date: Date) -> Bool {
+        return distance(to: date) > 0
+    }
+    func isAfter(_ date: Date) -> Bool {
+        return distance(to: date) < 0
     }
 }
