@@ -1,7 +1,7 @@
 Pod::Spec.new do |spec|
 
   spec.name         = "ValidationCore"
-  spec.version      = "0.1.5"
+  spec.version      = "0.1.6"
   spec.summary      = "Validating EHN health certificates from QR codes"
   spec.description  = <<-DESC
 Core functionality for validating EHN health certificates from QR codes. Suitable QR codes can be generated using https://dev.a-sit.at/certservice
