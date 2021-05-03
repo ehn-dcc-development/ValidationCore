@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import CocoaLumberjackSwift
 
 public struct FileStorage {
     private let STORAGE_DIR : String
@@ -28,7 +27,7 @@ public struct FileStorage {
             try fileData.write(to: filepath, options: .completeFileProtection)
             try filepath.excludeFromBackup()
         } catch (let error) {
-            DDLogError("Cannot write to file \(filepath): \(error)")
+            print("Cannot write to file \(filepath): \(error)")
             return false
         }
         return true
@@ -77,7 +76,7 @@ fileprivate extension FileManager {
                 try createDirectory(atPath: dir, withIntermediateDirectories: true, attributes: nil)
             }
             catch (let e){
-                DDLogError(e)
+                print(e)
             }
         }
     }

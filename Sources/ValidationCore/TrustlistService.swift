@@ -7,7 +7,6 @@
 
 import Foundation
 import SwiftCBOR
-import CocoaLumberjackSwift
 import Security
 
 class TrustlistService {
@@ -31,7 +30,7 @@ class TrustlistService {
         }
         updateTrustlist { error in
             if let error = error {
-                DDLogError("Cannot refresh trust list: \(error)")
+                print("Cannot refresh trust list: \(error)")
             }
             self.cachedKey(from: keyId, for: keyType, completionHandler)
         }
@@ -39,7 +38,7 @@ class TrustlistService {
     
     func updateTrustlist(completionHandler: @escaping (ValidationError?)->()) {
         guard let url = URL(string: "\(CERT_SERVICE_URL)\(TRUST_LIST_PATH)") else {
-            DDLogError("Cannot construct certificate query url.")
+            print("Cannot construct certificate query url.")
             completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot construct service url."))
             return
         }
@@ -51,7 +50,7 @@ class TrustlistService {
                   let status = (response as? HTTPURLResponse)?.statusCode,
                   200 == status,
                   let body = body else {
-                DDLogError("Cannot query trustlist service")
+                print("Cannot query trustlist service")
                 completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot renew trustlist: \(error?.localizedDescription)"))
                 return
             }
@@ -97,16 +96,16 @@ class TrustlistService {
     
     private func storeTrustlist(){
         guard let trustlistData = try? JSONEncoder().encode(self.cachedTrustlist) else {
-            DDLogError("Cannot encode trustlist for storing")
+            print("Cannot encode trustlist for storing")
             return
         }
         CryptoService.createKeyAndEncrypt(data: trustlistData, with: self.TRUSTLIST_KEY_ALIAS, completionHandler: { result in
             switch result {
             case .success(let data):
                 if !self.fileStorage.writeProtectedFileToDisk(fileData: data, with: self.TRUSTLIST_FILENAME) {
-                    DDLogError("Cannot write trustlist to disk")
+                    print("Cannot write trustlist to disk")
                 }
-            case .failure(let error): DDLogError(error)
+            case .failure(let error): print(error)
             }
         })
     }
@@ -120,7 +119,7 @@ class TrustlistService {
                        trustlist.isValid() {
                         self.cachedTrustlist = trustlist
                     }
-                case .failure(let error): DDLogError("Cannot load cached trust list: \(error)")
+                case .failure(let error): print("Cannot load cached trust list: \(error)")
                 }
             }
         }

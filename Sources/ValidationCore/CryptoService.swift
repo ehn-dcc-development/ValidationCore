@@ -9,7 +9,6 @@ import Foundation
 import CryptoKit
 import LocalAuthentication
 import Security
-import CocoaLumberjackSwift
 
 public struct CryptoService {
     
