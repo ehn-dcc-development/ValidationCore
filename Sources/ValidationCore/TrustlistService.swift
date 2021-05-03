@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftCBOR
+import CocoaLumberjackSwift
 import Security
 
 class TrustlistService {
@@ -30,15 +31,16 @@ class TrustlistService {
         }
         updateTrustlist { error in
             if let error = error {
-                print("Cannot refresh trust list: \(error)")
+                DDLogError("Cannot refresh trust list: \(error)")
             }
             self.cachedKey(from: keyId, for: keyType, completionHandler)
         }
     }
     
-    private func updateTrustlist(completionHandler: @escaping (Error?)->()) {
+    func updateTrustlist(completionHandler: @escaping (ValidationError?)->()) {
         guard let url = URL(string: "\(CERT_SERVICE_URL)\(TRUST_LIST_PATH)") else {
-            print("Cannot construct certificate query url.")
+            DDLogError("Cannot construct certificate query url.")
+            completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot construct service url."))
             return
         }
         
@@ -49,12 +51,12 @@ class TrustlistService {
                   let status = (response as? HTTPURLResponse)?.statusCode,
                   200 == status,
                   let body = body else {
-                print("Cannot query certificate.")
-                completionHandler(nil)
+                DDLogError("Cannot query trustlist service")
+                completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot renew trustlist: \(error?.localizedDescription)"))
                 return
             }
             guard self.refreshTrustlist(from: body) else {
-                completionHandler(ValidationError.TRUST_SERVICE_ERROR)
+                completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot create valid trustlist from response body"))
                 return
             }
             completionHandler(nil)
@@ -95,16 +97,16 @@ class TrustlistService {
     
     private func storeTrustlist(){
         guard let trustlistData = try? JSONEncoder().encode(self.cachedTrustlist) else {
-            print("Cannot encode trustlist for storing")
+            DDLogError("Cannot encode trustlist for storing")
             return
         }
         CryptoService.createKeyAndEncrypt(data: trustlistData, with: self.TRUSTLIST_KEY_ALIAS, completionHandler: { result in
             switch result {
             case .success(let data):
                 if !self.fileStorage.writeProtectedFileToDisk(fileData: data, with: self.TRUSTLIST_FILENAME) {
-                    print("Cannot write trustlist to disk")
+                    DDLogError("Cannot write trustlist to disk")
                 }
-            case .failure(let error): print(error)
+            case .failure(let error): DDLogError(error)
             }
         })
     }
@@ -118,7 +120,7 @@ class TrustlistService {
                        trustlist.isValid() {
                         self.cachedTrustlist = trustlist
                     }
-                case .failure(let error): print("Cannot load cached trust list: \(error)")
+                case .failure(let error): DDLogError("Cannot load cached trust list: \(error)")
                 }
             }
         }

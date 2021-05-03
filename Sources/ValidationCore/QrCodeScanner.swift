@@ -6,16 +6,12 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     var videoPreviewLayer: AVCaptureVideoPreviewLayer!
     var qrCodeFrameView: UIView!
     var qrCodeReceiver: QrCodeReceiver?
-    var viewController: UIViewController?
-    var qrPrompt: String?
-    var baseView: UIView!
+    var baseView: UIView?
     let supportedBarCodes = [AVMetadataObject.ObjectType.qr]
 
-    public func scan(_ viewController: UIViewController, _ qrPrompt: String, _ receiver: QrCodeReceiver) {
+    public func scan(_ baseView: UIView, _ receiver: QrCodeReceiver) {
         self.qrCodeReceiver = receiver
-        self.viewController = viewController
-        self.qrPrompt = qrPrompt
-        checkPermission(viewController, qrPrompt)
+        checkPermission(baseView)
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(rotated),
                                                name: UIDevice.orientationDidChangeNotification,
@@ -24,26 +20,27 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
 
     @objc
     func rotated() {
-        if viewController != nil && qrPrompt != nil && videoPreviewLayer != nil && baseView != nil && captureSession !=
-            nil {
+        if let videoPreviewLayer = videoPreviewLayer,
+           let captureSession = captureSession,
+           let baseView = baseView {
             videoPreviewLayer.removeFromSuperlayer()
             baseView.removeFromSuperview()
             captureSession.stopRunning()
-            setup(viewController!, qrPrompt!)
+            setup(baseView)
         }
     }
 
-    func checkPermission(_ viewController: UIViewController, _ qrPrompt: String) {
+    func checkPermission(_ baseView: UIView) {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
             DispatchQueue.main.async {
-                self.setup(viewController, qrPrompt)
+                self.setup(baseView)
             }
         default:
             AVCaptureDevice.requestAccess(for: .video) { granted in
                 if (granted) {
                     DispatchQueue.main.async {
-                        self.setup(viewController, qrPrompt)
+                        self.setup(baseView)
                     }
                 } else {
                     print("User has denied permission to use camera")
@@ -55,7 +52,7 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         }
     }
 
-    func setup(_ viewController: UIViewController, _ qrPrompt: String) {
+    func setup(_ baseView: UIView) {
         guard let captureDevice = AVCaptureDevice.default(for: AVMediaType.video),
               let captureDeviceInput = try? AVCaptureDeviceInput(device: captureDevice) else {
             print("Could not get AVCaptureDevice")
@@ -64,8 +61,6 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
             }
             return
         }
-        self.baseView = UIView()
-        baseView.frame = viewController.view.frame
         captureSession = AVCaptureSession()
         if !captureSession.canAddInput(captureDeviceInput) {
             print("Could not start AVCaptureSession")
@@ -81,15 +76,14 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         captureMetadataOutput.metadataObjectTypes = supportedBarCodes
         captureMetadataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
 
-        // let isLandscape = UIDevice.current.orientation.isLandscape
-        let minRectLen = min(UIScreen.main.bounds.width * 0.8, UIScreen.main.bounds.height * 0.8)
-        let padding = min(UIScreen.main.bounds.width * 0.05, UIScreen.main.bounds.height * 0.05)
+        let minRectLen = min(baseView.bounds.height, baseView.bounds.width)
         videoPreviewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
         videoPreviewLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill
         let videoPreview = UIView()
-        videoPreview.frame = CGRect(x: padding, y: padding, width: minRectLen, height: minRectLen)
+        videoPreview.frame = CGRect(x: 0, y: 0, width: minRectLen, height: minRectLen)
         videoPreview.layer.addSublayer(videoPreviewLayer)
         videoPreviewLayer.frame = videoPreview.frame
+        videoPreviewLayer.cornerRadius = 5
 
         if videoPreviewLayer.connection?.isVideoOrientationSupported ?? false {
             switch UIDevice.current.orientation {
@@ -105,51 +99,11 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         }
 
         qrCodeFrameView = UIView()
-        qrCodeFrameView.layer.borderColor = UIColor.green.cgColor
-        qrCodeFrameView.layer.borderWidth = 2
-
-        let promptLabel = UILabel()
-        promptLabel.numberOfLines = 0
-        promptLabel.lineBreakMode = .byWordWrapping
-        promptLabel.textAlignment = .center
-        promptLabel.text = qrPrompt
-        promptLabel.frame = CGRect(
-            x: padding,
-            y: videoPreview.center.y + minRectLen / 2 + padding * 2,
-            width: baseView.frame.width,
-            height: 50)
-        promptLabel.sizeToFit()
-
-        let closeButton = UIButton(type: .system)
-        closeButton.setTitle("Abbrechen", for: .normal)
-        closeButton.addTarget(self, action: #selector(buttonAction(_:)), for: .touchUpInside)
-        closeButton.frame = CGRect(
-            x: padding,
-            y: promptLabel.center.y + padding,
-            width: baseView.frame.width / 2,
-            height: 50)
-        closeButton.sizeToFit()
-        closeButton.center.x = promptLabel.center.x
+//        drawDetectionFrame()
 
         baseView.addSubview(videoPreview)
-        baseView.addSubview(closeButton)
         baseView.addSubview(qrCodeFrameView)
-        baseView.addSubview(promptLabel)
-        baseView.backgroundColor = .white
-        viewController.view.addSubview(baseView)
-
         captureSession.startRunning()
-    }
-
-    @objc
-    public func buttonAction(_ sender: UIButton!) {
-        videoPreviewLayer.removeFromSuperlayer()
-        baseView.removeFromSuperview()
-        captureSession.stopRunning()
-        NotificationCenter.default.removeObserver(self)
-        DispatchQueue.global(qos: .background).async {
-            self.qrCodeReceiver?.canceled()
-        }
     }
 
     @objc
@@ -161,7 +115,7 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
             let stringValue = readableObject.stringValue else {
                 return
         }
-        baseView.removeFromSuperview()
+        baseView?.removeFromSuperview()
         qrCodeFrameView.frame = readableObject.bounds
         captureSession.stopRunning()
         print("Detected QRCode with value \(stringValue)")
@@ -175,4 +129,5 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
+ 
 }

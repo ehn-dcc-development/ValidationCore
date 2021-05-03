@@ -9,10 +9,11 @@ import Foundation
 import CryptoKit
 import LocalAuthentication
 import Security
+import CocoaLumberjackSwift
 
-struct CryptoService {
+public struct CryptoService {
     
-    static func generateSymmetricKey(for alias: String, completionHandler : @escaping (ValidationError?)->()) throws {
+    public static func generateSymmetricKey(for alias: String, completionHandler : @escaping (ValidationError?)->()) throws {
         authenticate() { authContext, error in
             guard error == nil, let authContext = authContext else {
                 completionHandler(.KEYSTORE_ERROR(cause: "Authentication failed"))
@@ -26,7 +27,7 @@ struct CryptoService {
         }
     }
     
-    static func createKeyAndEncrypt(data: Data, with keyAlias: String, completionHandler : @escaping (Result<Data, ValidationError>)->()) {
+    public static func createKeyAndEncrypt(data: Data, with keyAlias: String, completionHandler : @escaping (Result<Data, ValidationError>)->()) {
         let authContext = LAContext()
         guard let key = createKey(for: keyAlias, with: authContext) else {
             completionHandler(.failure(.KEYSTORE_ERROR(cause: "Cannot create key")))
@@ -40,7 +41,7 @@ struct CryptoService {
         completionHandler(.success(sealed))
     }
     
-    static func decrypt(ciphertext: Data, with keyAlias: String, completionHandler : @escaping (Result<Data, ValidationError>)->()) {
+    public static func decrypt(ciphertext: Data, with keyAlias: String, completionHandler : @escaping (Result<Data, ValidationError>)->()) {
         guard let key = try? loadKey(alias: keyAlias) else {
             completionHandler(.failure(.KEYSTORE_ERROR(cause: "Cannot retrieve key from keychain")))
             return
