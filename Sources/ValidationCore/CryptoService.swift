@@ -79,7 +79,7 @@ public struct CryptoService {
         guard let accessFlags = SecAccessControlCreateWithFlags(
                 kCFAllocatorDefault,
                 kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
-                .userPresence,
+                [],
                 nil) else {
             throw ValidationError.KEYSTORE_ERROR(cause: "Cannot create access flags.")
         }
