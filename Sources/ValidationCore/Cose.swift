@@ -29,7 +29,7 @@ struct Cose {
         }
     }
     
-   private var signatureStruct : Data? {
+    private var signatureStruct : Data? {
         get {
             guard let header = protectedHeader.rawHeader else {
                 return nil
@@ -50,17 +50,41 @@ struct Cose {
     }
     
     init?(from data: Data) {
-        guard let cose = try? CBORDecoder(input: data.bytes).decodeItem()?.asCose(),
-              let type = CoseType.from(tag: cose.0),
-              let protectedHeader = CoseHeader(fromBytestring: cose.1[0]),
-              let signature = cose.1[3].asBytes() else {
+        guard let decodedData = try? CBOR.decode(data.bytes),
+              let cose = try? CBORDecoder(input: data.bytes).decodeItem()?.asCose() else {
             return nil
         }
-        self.type = type
-        self.protectedHeader = protectedHeader
-        self.unprotectedHeader = CoseHeader(from: cose.1[1])
-        self.payload = cose.1[2]
-        self.signature = Data(signature)
+        
+        let type = CoseType.from(tag: cose.0)
+        /* Process tagged and untagged COSE, based on https://github.com/ehn-digital-green-development/ValidationCore/issues/3 */
+        switch type {
+        case .sign1:
+            guard let protectedHeader = CoseHeader(fromBytestring: cose.1[0]),
+                  let signature = cose.1[3].asBytes(),
+                  let type = type else {
+                return nil
+            }
+            self.type = type
+            self.protectedHeader = protectedHeader
+            self.unprotectedHeader = CoseHeader(from: cose.1[1])
+            self.payload = cose.1[2]
+            self.signature = Data(signature)
+        default:
+            guard let decodedDataList = decodedData.asList() else {
+                return nil
+            }
+            
+            let headerCBOR = decodedDataList[0]
+            guard let header = CoseHeader(from: headerCBOR) else { return nil }
+            self.protectedHeader = header
+            
+            let text = decodedDataList[2]
+            self.payload = text
+            
+            self.unprotectedHeader = nil
+            self.signature = decodedDataList[3].asData()
+            self.type = .sign1
+        }
     }
     
     func hasValidSignature(for publicKey: SecKey) -> Bool {
