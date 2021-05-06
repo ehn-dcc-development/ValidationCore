@@ -10,7 +10,12 @@ import SwiftCBOR
 import CocoaLumberjackSwift
 import Security
 
-class TrustlistService {
+public protocol TrustlistService {
+    func key(for keyId: Data, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>)->())
+    func updateTrustlist(completionHandler: @escaping (ValidationError?)->())
+}
+
+    class DefaultTrustlistService : TrustlistService {
     private let CERT_SERVICE_URL = "https://dgc.a-sit.at/ehn/"
     private let TRUST_LIST_PATH = "cert/list"
     private let TRUSTLIST_FILENAME = "trustlist"

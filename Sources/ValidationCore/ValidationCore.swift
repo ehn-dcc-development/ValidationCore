@@ -14,9 +14,10 @@ public struct ValidationCore {
     
     private var completionHandler : ((Result<ValidationResult, ValidationError>) -> ())?
     private var scanner : QrCodeScanner?
-    private let trustlistService = TrustlistService()
+    private let trustlistService : TrustlistService
     
-    public init(){
+    public init(trustlistService: TrustlistService? = nil ){
+        self.trustlistService = trustlistService ?? DefaultTrustlistService()
         DDLog.add(DDOSLogger.sharedInstance)
    }
 

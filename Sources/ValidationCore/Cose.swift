@@ -51,16 +51,12 @@ struct Cose {
     }
     
     init?(from data: Data) {
-        guard let decodedData = try? CBOR.decode(data.bytes),
-              let cose = try? CBORDecoder(input: data.bytes).decodeItem()?.asCose() else {
-            return nil
-        }
+        let type = CoseType.from(data: data)
         
-        let type = CoseType.from(tag: cose.0)
-        /* Process tagged and untagged COSE, based on https://github.com/ehn-digital-green-development/ValidationCore/issues/3 */
         switch type {
         case .sign1:
-            guard let protectedHeader = CoseHeader(fromBytestring: cose.1[0]),
+            guard let cose = try? CBORDecoder(input: data.bytes).decodeItem()?.asCose(),
+                  let protectedHeader = CoseHeader(fromBytestring: cose.1[0]),
                   let signature = cose.1[3].asBytes(),
                   let type = type else {
                 return nil
@@ -70,13 +66,14 @@ struct Cose {
             self.unprotectedHeader = CoseHeader(from: cose.1[1])
             self.payload = cose.1[2]
             self.signature = Data(signature)
-        default:
-            guard let decodedDataList = decodedData.asList() else {
+        default: /* Process untagged COSE, based on https://github.com/ehn-digital-green-development/ValidationCore/issues/3 */
+            guard let decodedData = try? CBOR.decode(data.bytes),
+                  let decodedDataList = decodedData.asList() else {
                 return nil
             }
             
             let headerCBOR = decodedDataList[0]
-            guard let header = CoseHeader(from: headerCBOR) else { return nil }
+            guard let header = CoseHeader(fromBytestring: headerCBOR) else { return nil }
             self.protectedHeader = header
             
             let text = decodedDataList[2]
@@ -175,8 +172,11 @@ struct Cose {
         case sign1 = "Signature1"
         case sign = "Signature"
         
-        static func from(tag: CBOR.Tag) -> CoseType? {
-            switch tag {
+        static func from(data: Data) -> CoseType? {
+            guard let cose = try? CBORDecoder(input: data.bytes).decodeItem()?.asCose() else {
+                return nil
+            }
+            switch cose.0 {
             case .coseSign1Item: return .sign1
             case .coseSignItem: return .sign
             default:
