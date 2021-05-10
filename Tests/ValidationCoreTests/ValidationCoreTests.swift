@@ -13,77 +13,58 @@ class ValidationCoreSpec: QuickSpec {
         describe("The validation core") {
             
             var validationCore : ValidationCore!
+            let testDataProvider : TestDataProvider! = TestDataProvider()
             
             beforeEach {
-                validationCore = ValidationCore()
             }
             
-            context("process complete certificates and"){
-                it("should verify correct test certificate") {
-                    let correctEhnTestCert = TestDataProvider.Correct.ehnTestCertificate
-                    self.mockSignatureCert(correctEhnTestCert.keyId, correctEhnTestCert.encodedSigningCert)
-                    validationCore.validate(encodedData: correctEhnTestCert.encodedEhnCert) { result in
-                        switch result {
-                        case .success(let validationResult): expect(validationResult.isValid).to(be(true))
-                        case .failure: XCTFail("Should not result in error")
+            context("generated"){
+                for testData in testDataProvider.testData {
+                    it(testData.testContext.description) {
+                        let trustlistService = TestTrustlistService(testData.testContext)
+                        validationCore = ValidationCore(trustlistService: trustlistService)
+                        guard let prefixedEncodedCert = testData.prefixed else {
+                            XCTFail("QR code payload missing")
+                            return
                         }
-                    }
-                    
-                }
-                
-                it("should verify correct vaccination certificate") {
-                    let correctEhnVaccinationCert = TestDataProvider.Correct.ehnVaccinationCert
-                    self.mockSignatureCert(correctEhnVaccinationCert.keyId, correctEhnVaccinationCert.encodedSigningCert)
-                    validationCore.validate(encodedData: correctEhnVaccinationCert.encodedEhnCert) { result in
-                        switch result {
-                        case .success(let validationResult): expect(validationResult.isValid).to(be(true))
-                        case .failure: XCTFail("Should not result in error")
-                        }
-                    }
-                    
-                }
-                
-                it("should verify correct recovery certificate") {
-                    let correctEhnRecoveryCert = TestDataProvider.Correct.ehnRecoveryCert
-                    self.mockSignatureCert(correctEhnRecoveryCert.keyId, correctEhnRecoveryCert.encodedSigningCert)
-                    validationCore.validate(encodedData: correctEhnRecoveryCert.encodedEhnCert) { result in
-                        switch result {
-                        case .success(let validationResult): expect(validationResult.isValid).to(be(true))
-                        case .failure: XCTFail("Should not result in error")
-                        }
-                    }
-                }
-                
-                it("should verify certificate with RSA PSS signature"){
-                    let rsaSignedCert = TestDataProvider.Correct.ehnRsaSignedVaccinationCert
-                    self.mockSignatureCert(rsaSignedCert.keyId, rsaSignedCert.encodedSigningCert)
-                    validationCore.validate(encodedData: rsaSignedCert.encodedEhnCert) { result in
-                        switch result {
-                        case .success(let validationResult): expect(validationResult.isValid).to(be(true))
-                        case .failure: XCTFail("Should not result in error")
+                        validationCore.validate(encodedData: prefixedEncodedCert) { result in
+                            switch result {
+                            case .success(let validationResult): self.map(validationResult, to: testData)
+                            case .failure(let error): self.map(error, to: testData.expectedResults)
+                            }
                         }
                     }
                 }
             }
-            
-            context("can handle COSE specific characteristics"){
-                it("does not accept alg in unprotected header") {
-                    let incorrectEhnCert = TestDataProvider.Failure.unprotectedAlgHeader
-                    self.mockSignatureCert(incorrectEhnCert.keyId, incorrectEhnCert.encodedSigningCert)
-                    validationCore.validate(encodedData: incorrectEhnCert.encodedEhnCert) { result in
-                        switch result {
-                        case .success: XCTFail("Should not be able to deserialize incorrect CWT")
-                        case .failure(let error): expect(error).to(beError(ValidationError.COSE_DESERIALIZATION_FAILED))
-                        }
-                    }
-                }
-           }
+        }
+    }
+
+    private func map(_ validationResult: ValidationResult, to testData: EuTestData){
+        let expectedResults = testData.expectedResults
+        if true == expectedResults.isSchemeValidatable {
+            expect(validationResult.payload).to(beHealthCert(testData.jsonContent))
+        }
+        
+        if let verifiable = expectedResults.isVerifiable {
+            expect(validationResult.isValid == verifiable).to(beTrue())
         }
     }
     
-    private func mockSignatureCert(_ keyId : String, _ cert: String) {
-        stub(condition: pathEndsWith(keyId)) { _ in
-            return HTTPStubsResponse(data: cert.data(using: .utf8)!, statusCode: 200, headers: nil)
+    private func map(_ error: ValidationError, to expectedResults: ExpectedResults){
+        if false == expectedResults.isUnprefixed {
+            expect(error).to(beError(.INVALID_SCHEME_PREFIX))
+        }
+        if false == expectedResults.isBase45Decodable {
+            expect(error).to(beError(.BASE_45_DECODING_FAILED))
+        }
+        if false == expectedResults.isExpired {
+//            expect(error).to(beError(.COSE_EXPIRED)) //TODO implement
+        }
+        if false == expectedResults.isVerifiable {
+            expect(error).to(beError(.COSE_DESERIALIZATION_FAILED)) //TODO maybe more descriptive error?
+        }
+        if false == expectedResults.isDecodable {
+            expect(error).to(beError(.CBOR_DESERIALIZATION_FAILED)) //TODO check
         }
     }
 }

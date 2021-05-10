@@ -94,8 +94,8 @@ public struct Test : Codable {
     public let type: String
     public let testName: String?
     public let manufacturer: String?
-    public let timestampSample: UInt64
-    public let timestampResult : UInt64?
+    public let timestampSample: String
+    public let timestampResult : String?
     public let result: String
     public let testCenter: String
     public let country: String

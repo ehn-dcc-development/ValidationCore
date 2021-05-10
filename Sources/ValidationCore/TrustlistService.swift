@@ -15,7 +15,7 @@ public protocol TrustlistService {
     func updateTrustlist(completionHandler: @escaping (ValidationError?)->())
 }
 
-    class DefaultTrustlistService : TrustlistService {
+class DefaultTrustlistService : TrustlistService {
     private let CERT_SERVICE_URL = "https://dgc.a-sit.at/ehn/"
     private let TRUST_LIST_PATH = "cert/list"
     private let TRUSTLIST_FILENAME = "trustlist"
@@ -88,7 +88,21 @@ public protocol TrustlistService {
         completionHandler(.success(secKey))
     }
     
-    private func refreshTrustlist(from data: Data) -> Bool {
+    let signingCert = """
+    -----BEGIN CERTIFICATE-----
+    MIIBxDCCAWqgAwIBAgIKAXk8i89sYE7Y+jAKBggqhkjOPQQDAjA2MRYwFAYDVQQD
+    DA1BVCBER0MgQ1NDQSAxMQswCQYDVQQGEwJBVDEPMA0GA1UECgwGQk1TR1BLMB4X
+    DTIxMDUwNTEyNDEwNloXDTIzMDUwNTEyNDEwNlowRDEYMBYGA1UEAwwPQVQgVHJ1
+    c3QgTGlzdCAxMQswCQYDVQQGEwJBVDEPMA0GA1UECgwGQk1TR1BLMQowCAYDVQQF
+    EwExMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEosAp41RdwS4AcD04jPPwoCJ1
+    ooeTBe41JrH1YefkXKPtue28HUn6MqbTVznWYZTasUTSYGS2gKONQ7HmAi8WtqNS
+    MFAwDgYDVR0PAQH/BAQDAgeAMB0GA1UdDgQWBBSRtdkTcvBKLUkHYnYzekNz86kq
+    JDAfBgNVHSMEGDAWgBT+yShDn5RhL3n9ojHbaKbHrcBhnjAKBggqhkjOPQQDAgNI
+    ADBFAiEAxuPrBGTZp1w0C5u0e90ukYRN9wuxF0s3O3z3FNk9ql0CIAU9ddwqu5XR
+    r/OZ1OfaIwlUuqkjDnvKori9yTjekdb2
+    -----END CERTIFICATE-----
+    """
+    private func refreshTrustlist(from data: Data) -> Bool { //TODO check signing certificate of trustlist
         guard let cose = Cose(from: data),
               let cbor = cose.payload.decodeBytestring(),
               let trustlist = try? CodableCBORDecoder().decode(TrustList.self, from: Data(cbor.encode())),
