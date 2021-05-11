@@ -67,20 +67,16 @@ struct Cose {
             self.payload = cose.1[2]
             self.signature = Data(signature)
         default: /* Process untagged COSE, based on https://github.com/ehn-digital-green-development/ValidationCore/issues/3 */
-            guard let decodedData = try? CBOR.decode(data.bytes),
-                  let decodedDataList = decodedData.asList() else {
+            guard let coseData = try? CBOR.decode(data.bytes),
+                  let coseList = coseData.asList(),
+                  let protectedHeader = CoseHeader(fromBytestring: coseList[0]),
+                  let signature = coseList[3].asBytes() else {
                 return nil
             }
-            
-            let headerCBOR = decodedDataList[0]
-            guard let header = CoseHeader(fromBytestring: headerCBOR) else { return nil }
-            self.protectedHeader = header
-            
-            let text = decodedDataList[2]
-            self.payload = text
-            
-            self.unprotectedHeader = nil
-            self.signature = decodedDataList[3].asData()
+            self.protectedHeader = protectedHeader
+            self.unprotectedHeader = CoseHeader(fromBytestring: coseList[1]) ?? nil
+            self.payload = coseList[2]
+            self.signature = Data(signature)
             self.type = .sign1
         }
     }
