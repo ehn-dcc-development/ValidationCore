@@ -12,7 +12,7 @@ import ValidationCore
 
 /// Nimble matcher for validation errors
 func beError(_ validationError : ValidationError) -> Predicate<ValidationError> {
-    return Predicate.define("be error") { expression, message in
+    return Predicate.define("be \(validationError)") { expression, message in
         if let actual = try expression.evaluate(), case validationError = actual {
             return PredicateResult(status: .matches, message: message)
         }
@@ -21,7 +21,7 @@ func beError(_ validationError : ValidationError) -> Predicate<ValidationError> 
 }
 
 func beHealthCert(_ healthCert : EuHealthCert?) -> Predicate<EuHealthCert?> {
-    return Predicate.define("be health cert") { expression, message in
+    return Predicate.define("be \(healthCert)") { expression, message in
         if let actual = try expression.evaluate(), healthCert == actual {
             return PredicateResult(status: .matches, message: message)
         }

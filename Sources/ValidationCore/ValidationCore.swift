@@ -48,11 +48,16 @@ public struct ValidationCore {
         DDLogDebug("Decompressed data: \(decompressedData.humanReadable())")
 
         guard let cose = cose(from: decompressedData),
-              let cwt = CWT(from: cose.payload),
               let keyId = cose.keyId else {
             completionHandler(.failure(.COSE_DESERIALIZATION_FAILED))
             return
         }
+        
+        guard let cwt = CWT(from: cose.payload) else {
+            completionHandler(.failure(.CBOR_DESERIALIZATION_FAILED))
+            return
+        }
+        
         trustlistService.key(for: keyId, keyType: cwt.euHealthCert.type) { result in
             switch result {
             case .success(let key): completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: key), payload: cwt.euHealthCert)))

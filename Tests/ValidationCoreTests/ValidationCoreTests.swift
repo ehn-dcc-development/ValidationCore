@@ -64,7 +64,7 @@ class ValidationCoreSpec: QuickSpec {
             expect(error).to(beError(.COSE_DESERIALIZATION_FAILED)) //TODO maybe more descriptive error?
         }
         if false == expectedResults.isDecodable {
-            expect(error).to(beError(.CBOR_DESERIALIZATION_FAILED)) //TODO check
+            expect(error).to(beError(.CBOR_DESERIALIZATION_FAILED))
         }
     }
 }

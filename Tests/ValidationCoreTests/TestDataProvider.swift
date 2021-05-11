@@ -35,10 +35,13 @@ class TestDataProvider {
         if let dirContent = try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isDirectoryKey]) {
             for dir in dirContent.filter({ path in (try? path.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }) {
                 if let jsonFiles = try? FileManager.default.contentsOfDirectory(at: dir.appendingPathComponent("/2DCode/raw"), includingPropertiesForKeys: nil) {
+                    let countryPrefix = dir.lastPathComponent
                     for file in jsonFiles.filter({ path in path.lastPathComponent.hasSuffix("json")}) {
                         if let content = FileManager.default.contents(atPath: file.path) {
                             do {
-                                let testData = try decoder.decode(EuTestData.self, from: content)
+                                let filename = file.lastPathComponent.split(separator: ".")[0]
+                                var testData = try decoder.decode(EuTestData.self, from: content)
+                                testData.testContext.description = "\(countryPrefix)-\(filename)-\(testData.testContext.description)"
                                 fileContents.append(testData)
                             } catch (let error) {
                                 print("Parsing error in file \(file.path): \(error)")
@@ -76,7 +79,7 @@ struct EuTestData : Decodable {
     let base45EncodedAndCompressed: String?
     let prefixed: String?
     let base64BarcodeImage: String?
-    let testContext: TestContext
+    var testContext: TestContext
     let expectedResults: ExpectedResults
     
     enum CodingKeys: String, CodingKey {
@@ -96,7 +99,7 @@ struct TestContext : Decodable {
     let schemaVersion: String?
     let signingCertificate: String?
     let validationClock: Date?
-    let description: String
+    var description: String
     
     enum CodingKeys: String, CodingKey {
         case version = "VERSION"
