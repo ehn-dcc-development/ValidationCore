@@ -31,6 +31,8 @@ let package = Package(
             ]),
         .testTarget(
             name: "ValidationCoreTests",
-            dependencies: ["ValidationCore", "Nimble", "Quick", .product(name: "OHHTTPStubsSwift", package: "OHHTTPStubs")]),
+            dependencies: ["ValidationCore", "Nimble", "Quick", .product(name: "OHHTTPStubsSwift", package: "OHHTTPStubs")],
+            resources: [.copy("Testdata")]
+            ),
     ]
 )

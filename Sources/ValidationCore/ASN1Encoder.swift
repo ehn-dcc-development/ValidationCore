@@ -13,6 +13,9 @@ public class Asn1Encoder {
 
     // 32 for ES256
     public func convertRawSignatureIntoAsn1(_ data: Data, _ digestLengthInBytes: Int = 32) -> Data {
+        guard data.count >= digestLengthInBytes else {
+            return Data()
+        }
         let sigR = encodeIntegerToAsn1(data.prefix(data.count - digestLengthInBytes))
         let sigS = encodeIntegerToAsn1(data.suffix(digestLengthInBytes))
         let tagSequence: UInt8 = 0x30
