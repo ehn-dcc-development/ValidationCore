@@ -13,7 +13,7 @@ public struct EuHealthCert : Codable {
     public let dateOfBirth : String
     public let version: String
     public let vaccinations: [Vaccination]?
-    public let pastInfections: [PastInfection]?
+    public let recovery: [Recovery]?
     public let tests: [Test]?
     
     var type : CertType {
@@ -21,7 +21,7 @@ public struct EuHealthCert : Codable {
             switch self {
             case _ where nil != vaccinations:
                 return .vaccination
-            case _ where nil != pastInfections:
+            case _ where nil != recovery:
                 return .recovery
             default:
                 return .test
@@ -33,7 +33,7 @@ public struct EuHealthCert : Codable {
         case person = "nam"
         case dateOfBirth = "dob"
         case vaccinations = "v"
-        case pastInfections = "r"
+        case recovery = "r"
         case tests = "t"
         case version = "ver"
     }
@@ -45,7 +45,7 @@ public struct EuHealthCert : Codable {
         self.dateOfBirth = try container.decode(String.self, forKey: .dateOfBirth)
         self.vaccinations = try? container.decode([Vaccination].self, forKey: .vaccinations)
         self.tests = try? container.decode([Test].self, forKey: .tests)
-        self.pastInfections = try? container.decode([PastInfection].self, forKey: .pastInfections)
+        self.recovery = try? container.decode([Recovery].self, forKey: .recovery)
     }
 }
 
@@ -117,7 +117,7 @@ public struct Test : Codable {
     }
 }
 
-public struct PastInfection : Codable {
+public struct Recovery : Codable {
     public let disease: String
     public let dateFirstPositiveTest: String
     public let countryOfTest: String

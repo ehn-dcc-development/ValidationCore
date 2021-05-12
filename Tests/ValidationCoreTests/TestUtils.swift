@@ -65,8 +65,8 @@ extension Test : Equatable {
     }
 }
 
-extension PastInfection : Equatable {
-    public static func == (lhs: PastInfection, rhs: PastInfection) -> Bool {
+extension Recovery : Equatable {
+    public static func == (lhs: Recovery, rhs: Recovery) -> Bool {
         return lhs.certificateIdentifier == rhs.certificateIdentifier &&
             lhs.certificateIssuer == rhs.certificateIssuer &&
             lhs.disease == rhs.disease &&
