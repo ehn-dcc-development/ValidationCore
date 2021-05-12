@@ -1,5 +1,4 @@
 import base45_swift
-import CocoaLumberjackSwift
 import Gzip
 import UIKit
 
@@ -18,8 +17,7 @@ public struct ValidationCore {
     
     public init(trustlistService: TrustlistService? = nil ){
         self.trustlistService = trustlistService ?? DefaultTrustlistService()
-        DDLog.add(DDOSLogger.sharedInstance)
-   }
+    }
 
     //MARK: - Public API
     
@@ -32,7 +30,7 @@ public struct ValidationCore {
     
     /// Validate an Base45-encoded EHN health certificate
     public func validate(encodedData: String, _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()) {
-        DDLogInfo("Starting validation")
+        print("Starting validation")
         guard let unprefixedEncodedString = removeScheme(prefix: PREFIX, from: encodedData) else {
             completionHandler(.failure(.INVALID_SCHEME_PREFIX))
             return
@@ -42,13 +40,13 @@ public struct ValidationCore {
             completionHandler(.failure(.BASE_45_DECODING_FAILED))
             return
         }
-        DDLogDebug("Base45-decoded data: \(decodedData.humanReadable())")
+        print("Base45-decoded data: \(decodedData.humanReadable())")
         
         guard let decompressedData = decompress(decodedData) else {
             completionHandler(.failure(.DECOMPRESSION_FAILED))
             return
         }
-        DDLogDebug("Decompressed data: \(decompressedData.humanReadable())")
+        print("Decompressed data: \(decompressedData.humanReadable())")
 
         guard let cose = cose(from: decompressedData),
               let cwt = CWT(from: cose.payload),
@@ -75,7 +73,7 @@ public struct ValidationCore {
     /// Strips a given scheme prefix from the encoded EHN health certificate
     private func removeScheme(prefix: String, from encodedString: String) -> String? {
         guard encodedString.starts(with: prefix) else {
-            DDLogError("Encoded data string does not seem to include scheme prefix: \(encodedString.prefix(prefix.count))")
+            print("Encoded data string does not seem to include scheme prefix: \(encodedString.prefix(prefix.count))")
             return nil
         }
         return String(encodedString.dropFirst(prefix.count))
@@ -102,7 +100,7 @@ public struct ValidationCore {
 
 extension ValidationCore : QrCodeReceiver {
     public func canceled() {
-        DDLogDebug("QR code scanning cancelled.")
+        print("QR code scanning cancelled.")
         completionHandler?(.failure(.USER_CANCELLED))
     }
     
@@ -110,7 +108,7 @@ extension ValidationCore : QrCodeReceiver {
     public func onQrCodeResult(_ result: String?) {
         guard let result = result,
               let completionHandler = self.completionHandler else {
-            DDLogError("Cannot read QR code.")
+            print("Cannot read QR code.")
             self.completionHandler?(.failure(.QR_CODE_ERROR))
             return
         }

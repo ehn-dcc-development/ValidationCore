@@ -7,7 +7,6 @@
 
 import UIKit
 import SwiftCBOR
-import CocoaLumberjackSwift
 import Security
 
 struct Cose {
@@ -44,7 +43,7 @@ struct Cose {
                 let cborArray = CBOR(arrayLiteral: context, header, externalAad, payload)
                 return Data(cborArray.encode())
             default:
-                DDLogError("COSE Sign messages are not yet supported.")
+                print("COSE Sign messages are not yet supported.")
                 return nil
             }
         }
@@ -87,14 +86,14 @@ struct Cose {
         case .sign1:
             return hasCoseSign1ValidSignature(for: publicKey)
         default:
-            DDLogError("COSE Sign messages are not yet supported.")
+            print("COSE Sign messages are not yet supported.")
             return false
         }
     }
     
     private func hasCoseSign1ValidSignature(for key: SecKey) -> Bool {
         guard let signedData = signatureStruct else {
-            DDLogError("Cannot create Sign1 structure.")
+            print("Cannot create Sign1 structure.")
             return false
         }
         return verifySignature(key: key, signedData: signedData, rawSignature: signature)
@@ -110,14 +109,14 @@ struct Cose {
         case .ps256:
             algorithm = .rsaSignatureMessagePSSSHA256
         default:
-            DDLogError("Verification algorithm not supported.")
+            print("Verification algorithm not supported.")
             return false
         }
         
         var error : Unmanaged<CFError>?
         let result = SecKeyVerifySignature(key, algorithm, signedData as CFData, signature as CFData, &error)
         if let error = error {
-            DDLogError("Signature verification error: \(error)")
+            print("Signature verification error: \(error)")
         }
         return result
     }
