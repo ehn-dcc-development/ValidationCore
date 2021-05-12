@@ -39,4 +39,14 @@ struct CWT {
         }
         self.euHealthCert = healthCert
     }
+    
+    func isValid(using dateService: DateService) -> Bool {
+        guard let exp = exp,
+              let iat = iat else {
+            return false
+        }
+        let expDate = Date(timeIntervalSince1970: TimeInterval(exp))
+        let iatDate = Date(timeIntervalSince1970: TimeInterval(iat))
+        return dateService.isNowAfter(iatDate) && dateService.isNowBefore(expDate)
+    }
 }

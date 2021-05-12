@@ -14,6 +14,7 @@ public enum ValidationError : Error, Equatable {
     case BASE_45_DECODING_FAILED
     case COSE_DESERIALIZATION_FAILED
     case CBOR_DESERIALIZATION_FAILED
+    case CWT_EXPIRED
     case QR_CODE_ERROR
     case CERTIFICATE_QUERY_FAILED
     case USER_CANCELLED
@@ -33,6 +34,7 @@ public enum ValidationError : Error, Equatable {
         case .BASE_45_DECODING_FAILED: return "Base45 decoding failed"
         case .COSE_DESERIALIZATION_FAILED: return "COSE deserialization failed"
         case .CBOR_DESERIALIZATION_FAILED: return "CBOR deserialization failed"
+        case .CWT_EXPIRED: return "CWT expired"
         case .QR_CODE_ERROR: return "QR code error"
         case .CERTIFICATE_QUERY_FAILED: return "Signing certificate query failed"
         case .USER_CANCELLED: return "User cancelled"

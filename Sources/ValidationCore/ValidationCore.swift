@@ -12,9 +12,11 @@ public struct ValidationCore {
     private var completionHandler : ((Result<ValidationResult, ValidationError>) -> ())?
     private var scanner : QrCodeScanner?
     private let trustlistService : TrustlistService
-    
-    public init(trustlistService: TrustlistService? = nil ){
+    private let dateService : DateService
+
+    public init(trustlistService: TrustlistService? = nil, dateService: DateService? = nil ){
         self.trustlistService = trustlistService ?? DefaultTrustlistService()
+        self.dateService = dateService ?? DefaultDateService()
         DDLog.add(DDOSLogger.sharedInstance)
    }
 
@@ -58,6 +60,11 @@ public struct ValidationCore {
             return
         }
         
+        guard cwt.isValid(using: dateService) else {
+            completionHandler(.failure(.CWT_EXPIRED))
+            return
+        }
+
         trustlistService.key(for: keyId, keyType: cwt.euHealthCert.type) { result in
             switch result {
             case .success(let key): completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: key), payload: cwt.euHealthCert)))

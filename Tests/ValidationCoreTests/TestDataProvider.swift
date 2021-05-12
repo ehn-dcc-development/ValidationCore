@@ -121,6 +121,7 @@ struct ExpectedResults : Decodable {
     let isBase45Decodable: Bool?
     let isImageDecodable: Bool?
     let isExpired: Bool?
+    let isKeyUsageMatching: Bool?
     
     enum CodingKeys: String, CodingKey {
         case isValidObject = "EXPECTEDVALIDOBJECT"
@@ -133,5 +134,6 @@ struct ExpectedResults : Decodable {
         case isBase45Decodable = "EXPECTEDB45DECODE"
         case isImageDecodable = "EXPECTEDPICTUREDECODE"
         case isExpired = "EXPECTEDEXPIRATIONCHECK"
+        case isKeyUsageMatching = "EXPECTEDKEYUSAGE"
     }
 }

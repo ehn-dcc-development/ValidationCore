@@ -34,7 +34,7 @@ extension EuHealthCert : Equatable {
         return lhs.version == rhs.version &&
             lhs.person == rhs.person &&
             lhs.dateOfBirth == rhs.dateOfBirth &&
-            lhs.pastInfections == rhs.pastInfections &&
+            lhs.recovery == rhs.recovery &&
             lhs.vaccinations == rhs.vaccinations &&
             lhs.tests == rhs.tests
     }
@@ -89,5 +89,14 @@ extension Vaccination : Equatable {
             lhs.totalDoses == rhs.totalDoses &&
             lhs.vaccinationDate == rhs.vaccinationDate &&
             lhs.vaccine == rhs.vaccine
+    }
+}
+
+extension Date {
+    func isBefore(_ date: Date) -> Bool {
+        return distance(to: date) > 0
+    }
+    func isAfter(_ date: Date) -> Bool {
+        return distance(to: date) < 0
     }
 }

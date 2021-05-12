@@ -22,7 +22,8 @@ class ValidationCoreSpec: QuickSpec {
                 for testData in testDataProvider.testData {
                     it(testData.testContext.description) {
                         let trustlistService = TestTrustlistService(testData.testContext)
-                        validationCore = ValidationCore(trustlistService: trustlistService)
+                        let dateService = TestDateService(testData)
+                        validationCore = ValidationCore(trustlistService: trustlistService, dateService: dateService)
                         guard let prefixedEncodedCert = testData.prefixed else {
                             XCTFail("QR code payload missing")
                             return
@@ -58,13 +59,16 @@ class ValidationCoreSpec: QuickSpec {
             expect(error).to(beError(.BASE_45_DECODING_FAILED))
         }
         if false == expectedResults.isExpired {
-//            expect(error).to(beError(.COSE_EXPIRED)) //TODO implement
+            expect(error).to(beError(.CWT_EXPIRED))
         }
         if false == expectedResults.isVerifiable {
-            expect(error).to(beError(.COSE_DESERIALIZATION_FAILED)) //TODO maybe more descriptive error?
+            expect(error).to(beError(.COSE_DESERIALIZATION_FAILED))
         }
         if false == expectedResults.isDecodable {
             expect(error).to(beError(.CBOR_DESERIALIZATION_FAILED))
+        }
+        if false == expectedResults.isKeyUsageMatching {
+            expect(error).to(beError(.UNSUITABLE_PUBLIC_KEY_TYPE))
         }
     }
 }
