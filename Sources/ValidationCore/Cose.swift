@@ -161,19 +161,32 @@ struct Cose {
                   let alg = Algorithm(rawValue: algValue) else {
                 return nil
             }
-            self.init(alg: alg, keyId: cborMap[Headers.keyId]?.asBytes(), rawHeader: cbor)
+
+            self.init(alg: alg, cborMap: cborMap, rawHeader: cbor)
         }
         
         init?(from cbor: CBOR) {
-            let cborMap = cbor.asMap()
-            var alg : Algorithm?
-            if let algValue = cborMap?[Headers.algorithm]?.asUInt64() {
-                alg = Algorithm(rawValue: algValue)
+            guard let cborMap = cbor.asMap(),
+                  let algValue = cborMap[Headers.algorithm]?.asUInt64(),
+                  let alg = Algorithm(rawValue: algValue) else {
+                return nil
             }
-            self.init(alg: alg, keyId: cborMap?[Headers.keyId]?.asBytes())
+            
+            self.init(alg: alg, cborMap: cborMap)
         }
         
-        private init(alg: Algorithm?, keyId: [UInt8]?, rawHeader : CBOR? = nil){
+        private init?(alg: Algorithm?, cborMap: [CBOR : CBOR], rawHeader: CBOR? = nil) {
+            var keyId: [UInt8]?
+            if let key = cborMap[Headers.keyId]?.asBytes() {
+                keyId = key
+            }
+            else if let key = cborMap[Headers.keyId]?.unwrap() as? (CBOR.Tag, CBOR) {
+                keyId = key.1.asBytes()
+            }
+            else {
+                return nil
+            }
+            
             self.algorithm = alg
             self.keyId = keyId
             self.rawHeader = rawHeader
