@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  DGCValueSets.swift
 //  
 //
 //  Created by Dominik Mocher on 19.05.21.

@@ -94,10 +94,10 @@ public struct Person : Codable {
 }
 
 public struct Vaccination : Codable {
-    public let disease: DiseaseAgentTargeted //disease-agent-targeted
-    public let vaccine: VaccineProphylaxis //vaccine-prophylaxis
-    public let medicinialProduct: VaccineMedicinialProduct //vaccine-medicinal-product
-    public let marketingAuthorizationHolder: VaccineManufacturer //vaccine-mah-manf
+    public let disease: DiseaseAgentTargeted
+    public let vaccine: VaccineProphylaxis
+    public let medicinialProduct: VaccineMedicinialProduct
+    public let marketingAuthorizationHolder: VaccineManufacturer
     public let doseNumber: UInt64
     public let totalDoses: UInt64
     public let vaccinationDate: String
