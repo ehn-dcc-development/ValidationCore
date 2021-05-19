@@ -1,4 +1,5 @@
-import Foundation
+#if canImport(UIKit)
+import UIKit
 import AVFoundation
 import CocoaLumberjackSwift
 
@@ -132,3 +133,4 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     }
  
 }
+#endif

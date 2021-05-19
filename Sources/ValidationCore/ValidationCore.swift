@@ -1,7 +1,11 @@
 import base45_swift
 import CocoaLumberjackSwift
 import Gzip
+#if canImport(UIKit)
 import UIKit
+#else
+import Foundation
+#endif
 
 /// Electronic Health Certificate Validation Core
 ///
@@ -10,7 +14,9 @@ public struct ValidationCore {
     private let PREFIX = "HC1:"
 
     private var completionHandler : ((Result<ValidationResult, ValidationError>) -> ())?
+    #if canImport(UIKit)
     private var scanner : QrCodeScanner?
+    #endif
     private let trustlistService : TrustlistService
     private let dateService : DateService
 
@@ -22,12 +28,14 @@ public struct ValidationCore {
 
     //MARK: - Public API
     
+    #if canImport(UIKit)
     /// Instantiate a QR code scanner and validate the scannned EHN health certificate
     public mutating func validateQrCode(_ qrView : UIView, _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()){
         self.completionHandler = completionHandler
         self.scanner = QrCodeScanner()
         scanner?.scan(qrView, self)
     }
+    #endif
     
     /// Validate an Base45-encoded EHN health certificate
     public func validate(encodedData: String, _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()) {
@@ -106,7 +114,7 @@ public struct ValidationCore {
 }
 
 // MARK: - QrCodeReceiver
-
+#if canImport(UIKit)
 extension ValidationCore : QrCodeReceiver {
     public func canceled() {
         DDLogDebug("QR code scanning cancelled.")
@@ -124,6 +132,6 @@ extension ValidationCore : QrCodeReceiver {
         validate(encodedData: result, completionHandler)
     }
 }
-
+#endif
 
 

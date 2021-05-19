@@ -6,6 +6,7 @@ let package = Package(
     name: "ValidationCore",
     platforms: [
         .iOS(.v13),
+        .macOS(.v11)
     ],
     products: [
         .library(

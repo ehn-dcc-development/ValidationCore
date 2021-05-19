@@ -5,7 +5,7 @@
 //  Created by Dominik Mocher on 07.04.21.
 //
 
-import UIKit
+import Foundation
 import SwiftCBOR
 import CocoaLumberjackSwift
 import Security
