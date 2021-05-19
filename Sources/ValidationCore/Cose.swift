@@ -51,14 +51,13 @@ struct Cose {
     }
     
     init?(from data: Data) {
-        let type = CoseType.from(data: data)
-        
-        switch type {
-        case .sign1:
-            guard let cose = try? CBORDecoder(input: data.bytes).decodeItem()?.asCose(),
+        let cborType = CborType.from(data: data)
+        switch cborType {
+        case .tag:
+            guard let cose = try? CBOR.decode(data.bytes)?.asCose(),
                   let protectedHeader = CoseHeader(fromBytestring: cose.1[0]),
                   let signature = cose.1[3].asBytes(),
-                  let type = type else {
+                  let type = CoseType.from(data: data) else {
                 return nil
             }
             self.type = type
@@ -66,7 +65,7 @@ struct Cose {
             self.unprotectedHeader = CoseHeader(from: cose.1[1])
             self.payload = cose.1[2]
             self.signature = Data(signature)
-        default: /* Process untagged COSE, based on https://github.com/ehn-digital-green-development/ValidationCore/issues/3 */
+        case .list:
             guard let coseData = try? CBOR.decode(data.bytes),
                   let coseList = coseData.asList(),
                   let protectedHeader = CoseHeader(fromBytestring: coseList[0]),
@@ -78,6 +77,23 @@ struct Cose {
             self.payload = coseList[2]
             self.signature = Data(signature)
             self.type = .sign1
+        case .cwt:
+            guard let rawCose = try? CBORDecoder(input: data.bytes).decodeItem(),
+                  let cwtCose = rawCose.unwrap() as? (CBOR.Tag, CBOR),
+                  let coseData = cwtCose.1.unwrap() as? (CBOR.Tag, CBOR),
+                  let coseList = coseData.1.asList(),
+                  let protectedHeader = CoseHeader(fromBytestring: coseList[0]),
+                  let signature = coseList[3].asBytes() else {
+                return nil
+            }
+            self.protectedHeader = protectedHeader
+            self.unprotectedHeader = CoseHeader(fromBytestring: coseList[1]) ?? nil
+            self.payload = coseList[2]
+            self.signature = Data(signature)
+            self.type = .sign1
+        case .unknown:
+            DDLogError("Unknown CBOR type.")
+            return nil
         }
     }
     
