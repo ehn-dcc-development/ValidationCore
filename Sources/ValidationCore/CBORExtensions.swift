@@ -56,7 +56,7 @@ extension CBOR {
     func asData() -> Data {
         return Data(self.encode())
     }
-    
+     
     func asCose() -> (CBOR.Tag, [CBOR])? {
         guard let rawCose =  self.unwrap() as? (CBOR.Tag, CBOR),
               let cosePayload = rawCose.1.asList() else {
@@ -88,5 +88,21 @@ extension Dictionary where Key == CBOR {
     
     subscript<Index: RawRepresentable>(index: Index) -> Value? where Index.RawValue == Int {
         return self[CBOR(integerLiteral: index.rawValue)]
+    }
+}
+
+enum CborType: UInt8 {
+    case tag = 210
+    case list = 132
+    case cwt = 216
+    case unknown
+    
+    static func from(data: Data) -> CborType {
+        switch data.bytes[0] {
+        case self.tag.rawValue: return tag
+        case list.rawValue: return list
+        case cwt.rawValue: return cwt
+        default: return unknown
+        }
     }
 }
