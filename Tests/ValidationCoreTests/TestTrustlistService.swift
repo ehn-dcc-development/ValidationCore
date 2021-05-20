@@ -30,7 +30,7 @@ extension TestTrustlistService: TrustlistService {
         completionHandler(.success(secKey))
     }
     
-    func updateTrustlist(completionHandler: @escaping (ValidationError?) -> ()) {
+    func updateTrustlistIfNecessary(completionHandler: @escaping (ValidationError?) -> ()) {
         /* not implemented */
     }
 }

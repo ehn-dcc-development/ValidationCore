@@ -6,27 +6,20 @@
 //
 
 import Foundation
+import SwiftCBOR
+import ASN1Decoder
 
 struct TrustList : Codable {
-    let validFrom : UInt64
-    let validUntil : UInt64
     let entries : [TrustEntry]
+    var hash: Data?
     
     enum CodingKeys: String, CodingKey {
-        case validFrom = "f"
-        case validUntil = "u"
         case entries = "c"
+        case hash = "signatureHash"
     }
     
-    func isValid() -> Bool {
-        let now = Date()
-        let validFromDate = Date(timeIntervalSince1970: TimeInterval(validFrom))
-        let validUntilDate = Date(timeIntervalSince1970: TimeInterval(validUntil))
-        guard now.isAfter(validFromDate),
-              now.isBefore(validUntilDate) else {
-            return false
-        }
-        return true
+    init() {
+        entries = [TrustEntry]()
     }
     
     func entry(for keyId: Data) -> TrustEntry? {
@@ -35,52 +28,54 @@ struct TrustList : Codable {
 }
 
 struct TrustEntry : Codable {
-    let validUntil : UInt64
-    let validFrom : UInt64
-    let publicKeyData : Data
-    let keyId : Data
-    let keyType :  KeyType
-    let certType : [CertType]
+    let cert: Data
+    let keyId: Data
+    
+    private let OID_TEST = "1.3.6.1.4.1.0.1847.2021.1.1"
+    private let OID_VACCINATION = "1.3.6.1.4.1.0.1847.2021.1.2"
+    private let OID_RECOVERY = "1.3.6.1.4.1.0.1847.2021.1.3"
     
     enum CodingKeys: String, CodingKey {
-        case publicKeyData = "p"
-        case validUntil = "u"
-        case keyType = "k"
-        case certType = "t"
-        case validFrom = "f"
+        case cert = "c"
         case keyId = "i"
     }
     
     public func isSuitable(for certType: CertType) -> Bool {
-        return self.certType.contains(certType)
-    }
-    
-    var publicKey : SecKey? {
-        get {
-            var attributes : [CFString:Any]
-            switch keyType {
-            case .ec:
-                attributes = [kSecAttrKeyClass: kSecAttrKeyClassPublic,
-                              kSecAttrKeyType: kSecAttrKeyTypeEC,
-                              kSecAttrKeySizeInBits: 256]
-            case .rsa:
-                attributes = [kSecAttrKeyClass: kSecAttrKeyClassPublic,
-                              kSecAttrKeyType: kSecAttrKeyTypeRSA,
-                              kSecAttrKeySizeInBits: 2048]
-            }
-            return SecKeyCreateWithData(publicKeyData as CFData, attributes as CFDictionary, nil)
-        }
-    }
-    
-    func isValid() -> Bool {
-        let now = Date()
-        let validFromDate = Date(timeIntervalSince1970: TimeInterval(validFrom))
-        let validUntilDate = Date(timeIntervalSince1970: TimeInterval(validUntil))
-        guard now.isAfter(validFromDate),
-              now.isBefore(validUntilDate) else {
+        guard let certificate = try? X509Certificate(data: cert) else {
             return false
         }
+        if isType(in: certificate) {
+            switch certType {
+            case .test:
+                return nil != certificate.extensionObject(oid: OID_TEST)
+            case .vaccination:
+                return nil != certificate.extensionObject(oid: OID_VACCINATION)
+            case .recovery:
+                return nil != certificate.extensionObject(oid: OID_RECOVERY)
+            }
+        }
         return true
+    }
+    var publicKey : SecKey? {
+           get {
+               if let certificate = SecCertificateCreateWithData(nil, cert as CFData) {
+                   return SecCertificateCopyKey(certificate)
+               }
+               return nil
+           }
+       }
+       
+       func isValid(for dateService: DateService) -> Bool {
+           guard let certificate = try? X509Certificate(data: cert) else {
+               return false
+           }
+           return certificate.checkValidity(dateService.now)
+       }
+    
+    private func isType(in certificate: X509Certificate) -> Bool {
+        return nil != certificate.extensionObject(oid: OID_TEST)
+            || nil != certificate.extensionObject(oid: OID_VACCINATION)
+            || nil != certificate.extensionObject(oid: OID_RECOVERY)
     }
 }
 

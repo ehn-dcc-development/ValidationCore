@@ -12,14 +12,16 @@ import Security
 
 public protocol TrustlistService {
     func key(for keyId: Data, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>)->())
-    func updateTrustlist(completionHandler: @escaping (ValidationError?)->())
+    func updateTrustlistIfNecessary(completionHandler: @escaping (ValidationError?)->())
 }
 
 class DefaultTrustlistService : TrustlistService {
-    private let CERT_SERVICE_URL = "https://dgc.a-sit.at/ehn/"
-    private let TRUST_LIST_PATH = "cert/list"
+    private let CERT_SERVICE_URL = "https://dgc.a-sit.at/ehn/cert/"
+    private let TRUST_LIST_PATH = "listv2"
+    private let SIGNATURE_PATH = "sigv2"
     private let TRUSTLIST_FILENAME = "trustlist"
     private let TRUSTLIST_KEY_ALIAS = "trustlist_key"
+    private let dateService : DateService
     private var cachedTrustlist : TrustList
     private let fileStorage : FileStorage
     private let trustlistAnchor = """
@@ -31,20 +33,17 @@ class DefaultTrustlistService : TrustlistService {
     N701EnxWGK3gIgPaUgBN+ljZAs76zQIhAODq4TJ2qAPpFc1FIUOvvlycGJ6QVxNX
     EkhRcgdlVfUb
     """.replacingOccurrences(of: "\n", with: "")
- 
     
-    init() {
+    
+    init(dateService: DateService) {
         self.fileStorage = FileStorage()
-        cachedTrustlist = TrustList(validFrom: 0, validUntil: 0, entries: [])
+        cachedTrustlist = TrustList()
+        self.dateService = dateService
         self.loadCachedTrustlist()
     }
     
     func key(for keyId: Data, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>)->()){
-        if cachedTrustlist.isValid() {
-            cachedKey(from: keyId, for: keyType, completionHandler)
-            return
-        }
-        updateTrustlist { error in
+        updateTrustlistIfNecessary { error in
             if let error = error {
                 DDLogError("Cannot refresh trust list: \(error)")
             }
@@ -52,25 +51,34 @@ class DefaultTrustlistService : TrustlistService {
         }
     }
     
-    func updateTrustlist(completionHandler: @escaping (ValidationError?)->()) {
-        guard let url = URL(string: "\(CERT_SERVICE_URL)\(TRUST_LIST_PATH)") else {
-            DDLogError("Cannot construct certificate query url.")
-            completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot construct service url."))
+    func updateTrustlistIfNecessary(completionHandler: @escaping (ValidationError?)->()) {
+        updateDetachedSignature() { result in
+            switch result {
+            case .success(let hash):
+                if hash != self.cachedTrustlist.hash {
+                    self.updateTrustlist(for: hash, completionHandler)
+                    return
+                }
+                completionHandler(nil)
+            case .failure(let error):
+                completionHandler(error)
+            }
+       }
+    }
+    
+    private func updateTrustlist(for hash: Data, _ completionHandler: @escaping (ValidationError?)->()) {
+        guard let request = self.defaultRequest(to: self.TRUST_LIST_PATH) else {
+            completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot create request to trustlist service."))
             return
         }
         
-        var request = URLRequest(url: url)
-        request.addValue("application/octet-stream", forHTTPHeaderField: "Accept")
         URLSession.shared.dataTask(with: request) { body, response, error in
-            guard error == nil,
-                  let status = (response as? HTTPURLResponse)?.statusCode,
-                  200 == status,
-                  let body = body else {
+            guard self.isResponseValid(response, error), let body = body else {
                 DDLogError("Cannot query trustlist service")
-                completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot renew trustlist: \(error?.localizedDescription)"))
+                completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot renew trustlist: \(error?.localizedDescription ?? "")"))
                 return
             }
-            guard self.refreshTrustlist(from: body) else {
+            guard self.refreshTrustlist(from: body, for: hash) else {
                 completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot create valid trustlist from response body"))
                 return
             }
@@ -78,12 +86,57 @@ class DefaultTrustlistService : TrustlistService {
         }.resume()
     }
     
+    private func updateDetachedSignature(completionHandler: @escaping (Result<Data, ValidationError>)->()) {
+        guard let request = defaultRequest(to: SIGNATURE_PATH) else {
+            completionHandler(.failure(.TRUST_SERVICE_ERROR(cause: "Cannot create request to trustlist service.")))
+            return
+        }
+        URLSession.shared.dataTask(with: request) { body, response, error in
+            guard self.isResponseValid(response, error), let body = body else {
+                completionHandler(.failure(.TRUST_SERVICE_ERROR(cause: "Error in trustlist service response: \(error?.localizedDescription ?? "")")))
+                return
+            }
+            guard let cose = Cose(from: body),
+                  let trustAnchorKey = self.trustAnchorKey(),
+                  cose.hasValidSignature(for: trustAnchorKey) else {
+                completionHandler(.failure(.TRUST_SERVICE_ERROR(cause: "Invalid COSE in trustlist service response.")))
+                return
+            }
+            guard let cwt = CWT(from: cose.payload),
+                  cwt.isValid(using: self.dateService),
+                  let trustlistHash = cwt.sub else {
+                completionHandler(.failure(.TRUST_SERVICE_ERROR(cause: "Invalid CWT in trustlist service response.")))
+                return
+            }
+            completionHandler(.success(trustlistHash))
+        }.resume()
+    }
+    
+    private func defaultRequest(to path: String) -> URLRequest? {
+        guard let url = URL(string: "\(CERT_SERVICE_URL)\(path)") else {
+            return nil
+        }
+        var request = URLRequest(url: url)
+        request.addValue("application/octet-stream", forHTTPHeaderField: "Accept")
+        request.cachePolicy = .returnCacheDataElseLoad
+        return request
+    }
+    
+    private func isResponseValid(_ response: URLResponse?, _ error: Error?) -> Bool {
+        guard error == nil,
+              let status = (response as? HTTPURLResponse)?.statusCode,
+              200 == status else {
+            return false
+        }
+        return true
+    }
+    
     private func cachedKey(from keyId: Data, for keyType: CertType, _ completionHandler: @escaping (Result<SecKey, ValidationError>)->()) {
         guard let entry = cachedTrustlist.entry(for: keyId) else {
             completionHandler(.failure(.KEY_NOT_IN_TRUST_LIST))
             return
         }
-        guard entry.isValid() else {
+        guard entry.isValid(for: dateService) else {
             completionHandler(.failure(.PUBLIC_KEY_EXPIRED))
             return
         }
@@ -98,15 +151,12 @@ class DefaultTrustlistService : TrustlistService {
         completionHandler(.success(secKey))
     }
     
-   private func refreshTrustlist(from data: Data) -> Bool {
-        guard let cose = Cose(from: data),
-              let publicKey = trustAnchorKey(),
-              cose.hasValidSignature(for: publicKey),
-              let cbor = cose.payload.decodeBytestring(),
-              let trustlist = try? CodableCBORDecoder().decode(TrustList.self, from: Data(cbor.encode())),
-              trustlist.isValid() else {
+    private func refreshTrustlist(from data: Data, for hash: Data) -> Bool {
+        guard let cbor = try? CBORDecoder(input: data.bytes).decodeItem(),
+            var trustlist = try? CodableCBORDecoder().decode(TrustList.self, from: cbor.asData()) else {
             return false
         }
+        trustlist.hash = hash
         self.cachedTrustlist = trustlist
         storeTrustlist()
         return true
@@ -133,8 +183,7 @@ class DefaultTrustlistService : TrustlistService {
             CryptoService.decrypt(ciphertext: trustlistData, with: TRUSTLIST_KEY_ALIAS) { result in
                 switch result {
                 case .success(let plaintext):
-                    if let trustlist = try? JSONDecoder().decode(TrustList.self, from: plaintext),
-                       trustlist.isValid() {
+                    if let trustlist = try? JSONDecoder().decode(TrustList.self, from: plaintext) {
                         self.cachedTrustlist = trustlist
                     }
                 case .failure(let error): DDLogError("Cannot load cached trust list: \(error)")

@@ -21,8 +21,9 @@ public struct ValidationCore {
     private let dateService : DateService
 
     public init(trustlistService: TrustlistService? = nil, dateService: DateService? = nil ){
-        self.trustlistService = trustlistService ?? DefaultTrustlistService()
-        self.dateService = dateService ?? DefaultDateService()
+        let dateService = dateService ?? DefaultDateService()
+        self.trustlistService = trustlistService ?? DefaultTrustlistService(dateService: dateService)
+        self.dateService = dateService
         DDLog.add(DDOSLogger.sharedInstance)
    }
 
@@ -63,7 +64,8 @@ public struct ValidationCore {
             return
         }
         
-        guard let cwt = CWT(from: cose.payload) else {
+        guard let cwt = CWT(from: cose.payload),
+              let euHealthCert = cwt.euHealthCert else {
             completionHandler(.failure(.CBOR_DESERIALIZATION_FAILED))
             return
         }
@@ -73,16 +75,16 @@ public struct ValidationCore {
             return
         }
 
-        trustlistService.key(for: keyId, keyType: cwt.euHealthCert.type) { result in
+        trustlistService.key(for: keyId, keyType: euHealthCert.type) { result in
             switch result {
-            case .success(let key): completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: key), payload: cwt.euHealthCert)))
+            case .success(let key): completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: key), payload: euHealthCert)))
             case .failure(let error): completionHandler(.failure(error))
             }
         }
     }
 
     public func updateTrustlist(completionHandler: @escaping (ValidationError?)->()) {
-        trustlistService.updateTrustlist(completionHandler: completionHandler)
+        trustlistService.updateTrustlistIfNecessary(completionHandler: completionHandler)
     }
 
     //MARK: - Helper Functions

@@ -18,6 +18,7 @@ let package = Package(
         .package(url: "https://github.com/CocoaLumberjack/CocoaLumberjack.git", .upToNextMajor(from: "3.7.0")),
         .package(name: "Gzip", url: "https://github.com/1024jp/GzipSwift", .upToNextMajor(from: "5.1.1")),
         .package(url: "https://github.com/unrelentingtech/SwiftCBOR", .upToNextMajor(from: "0.4.3")),
+        .package(url: "https://github.com/filom/ASN1Decoder", .upToNextMajor(from: "1.7.1")),
         .package(url: "https://github.com/Quick/Nimble.git", .upToNextMajor(from: "9.0.0")),
         .package(url: "https://github.com/Quick/Quick", .upToNextMajor(from: "3.1.2")),
         .package(url: "https://github.com/AliSoftware/OHHTTPStubs", .upToNextMajor(from: "9.1.0")),
@@ -27,6 +28,7 @@ let package = Package(
             name: "ValidationCore",
             dependencies: ["base45-swift",
                            .product(name: "CocoaLumberjackSwift", package: "CocoaLumberjack"),
+                           "ASN1Decoder",
                            "Gzip",
                            "SwiftCBOR"
             ]),

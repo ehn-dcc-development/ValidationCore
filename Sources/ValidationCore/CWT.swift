@@ -12,12 +12,16 @@ struct CWT {
     let iss : String?
     let exp : UInt64?
     let iat : UInt64?
-    let euHealthCert : EuHealthCert
-    
+    let nbf : UInt64?
+    let sub : Data?
+    let euHealthCert : EuHealthCert?
+
     enum PayloadKeys : Int {
         case iss = 1
-        case iat = 6
+        case sub = 2
         case exp = 4
+        case nbf = 5
+        case iat = 6
         case hcert = -260
         
         enum HcertKeys : Int {
@@ -32,21 +36,31 @@ struct CWT {
         iss = decodedPayload[PayloadKeys.iss]?.asString()
         exp = decodedPayload[PayloadKeys.exp]?.asUInt64()
         iat = decodedPayload[PayloadKeys.iat]?.asUInt64()
-        guard let hCertMap = decodedPayload[PayloadKeys.hcert]?.asMap(),
-              let certData = hCertMap[PayloadKeys.HcertKeys.euHealthCertV1]?.asData(),
-              let healthCert = try? CodableCBORDecoder().decode(EuHealthCert.self, from: certData) else {
-            return nil
+        nbf = decodedPayload[PayloadKeys.nbf]?.asUInt64()
+        sub = decodedPayload[PayloadKeys.sub]?.asData()
+        
+        var euHealthCert : EuHealthCert? = nil
+        if let hCertMap = decodedPayload[PayloadKeys.hcert]?.asMap(),
+           let certData = hCertMap[PayloadKeys.HcertKeys.euHealthCertV1]?.asData() {
+           euHealthCert = try? CodableCBORDecoder().decode(EuHealthCert.self, from: certData)
         }
-        self.euHealthCert = healthCert
+        self.euHealthCert = euHealthCert
     }
     
     func isValid(using dateService: DateService) -> Bool {
-        guard let exp = exp,
-              let iat = iat else {
+        guard let exp = exp else {
             return false
         }
         let expDate = Date(timeIntervalSince1970: TimeInterval(exp))
-        let iatDate = Date(timeIntervalSince1970: TimeInterval(iat))
-        return dateService.isNowAfter(iatDate) && dateService.isNowBefore(expDate)
+        var isValid = dateService.isNowBefore(expDate)
+        if let iat = iat {
+           let iatDate = Date(timeIntervalSince1970: TimeInterval(iat))
+            isValid = isValid && dateService.isNowAfter(iatDate)
+        }
+        if let nbf = nbf {
+            let nbfDate = Date(timeIntervalSince1970: TimeInterval(nbf))
+            isValid = isValid && dateService.isNowAfter(nbfDate)
+        }
+        return isValid
     }
 }
