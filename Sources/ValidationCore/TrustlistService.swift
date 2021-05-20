@@ -42,7 +42,7 @@ class DefaultTrustlistService : TrustlistService {
         self.loadCachedTrustlist()
     }
     
-    func key(for keyId: Data, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>)->()){
+    public func key(for keyId: Data, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>)->()){
         updateTrustlistIfNecessary { error in
             if let error = error {
                 DDLogError("Cannot refresh trust list: \(error)")
@@ -51,7 +51,7 @@ class DefaultTrustlistService : TrustlistService {
         }
     }
     
-    func updateTrustlistIfNecessary(completionHandler: @escaping (ValidationError?)->()) {
+    public func updateTrustlistIfNecessary(completionHandler: @escaping (ValidationError?)->()) {
         updateDetachedSignature() { result in
             switch result {
             case .success(let hash):
@@ -91,6 +91,7 @@ class DefaultTrustlistService : TrustlistService {
             completionHandler(.failure(.TRUST_SERVICE_ERROR(cause: "Cannot create request to trustlist service.")))
             return
         }
+        
         URLSession.shared.dataTask(with: request) { body, response, error in
             guard self.isResponseValid(response, error), let body = body else {
                 completionHandler(.failure(.TRUST_SERVICE_ERROR(cause: "Error in trustlist service response: \(error?.localizedDescription ?? "")")))

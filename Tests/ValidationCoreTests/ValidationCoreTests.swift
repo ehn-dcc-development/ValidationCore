@@ -21,8 +21,8 @@ class ValidationCoreSpec: QuickSpec {
             context("generated"){
                 for testData in testDataProvider.testData {
                     it(testData.testContext.description) {
-                        let trustlistService = TestTrustlistService(testData.testContext)
                         let dateService = TestDateService(testData)
+                        let trustlistService = TestTrustlistService(testData.testContext, dateService: dateService)
                         validationCore = ValidationCore(trustlistService: trustlistService, dateService: dateService)
                         guard let prefixedEncodedCert = testData.prefixed else {
                             XCTFail("QR code payload missing")

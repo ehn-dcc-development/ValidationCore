@@ -27,7 +27,7 @@ struct TrustList : Codable {
     }
 }
 
-struct TrustEntry : Codable {
+public struct TrustEntry : Codable {
     let cert: Data
     let keyId: Data
     
@@ -38,6 +38,11 @@ struct TrustEntry : Codable {
     enum CodingKeys: String, CodingKey {
         case cert = "c"
         case keyId = "i"
+    }
+    
+    public init(cert: Data){
+        self.cert = cert
+        self.keyId = Data()
     }
     
     public func isSuitable(for certType: CertType) -> Bool {
@@ -56,21 +61,22 @@ struct TrustEntry : Codable {
         }
         return true
     }
-    var publicKey : SecKey? {
-           get {
-               if let certificate = SecCertificateCreateWithData(nil, cert as CFData) {
-                   return SecCertificateCopyKey(certificate)
-               }
-               return nil
-           }
-       }
-       
-       func isValid(for dateService: DateService) -> Bool {
-           guard let certificate = try? X509Certificate(data: cert) else {
-               return false
-           }
-           return certificate.checkValidity(dateService.now)
-       }
+    
+    public var publicKey : SecKey? {
+        get {
+            if let certificate = SecCertificateCreateWithData(nil, cert as CFData) {
+                return SecCertificateCopyKey(certificate)
+            }
+            return nil
+        }
+    }
+    
+    public func isValid(for dateService: DateService) -> Bool {
+        guard let certificate = try? X509Certificate(data: cert) else {
+            return false
+        }
+        return certificate.checkValidity(dateService.now)
+    }
     
     private func isType(in certificate: X509Certificate) -> Bool {
         return nil != certificate.extensionObject(oid: OID_TEST)

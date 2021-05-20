@@ -9,17 +9,22 @@ import Foundation
 import ValidationCore
 
 struct TestDateService : DateService {
-    let now : Date?
+    let testNow : Date?
     
     init(_ testData: EuTestData) {
-        now = testData.expectedResults.isExpired == false ? testData.testContext.validationClock : nil
+        testNow = testData.expectedResults.isExpired == false ? testData.testContext.validationClock : nil
     }
     
+    var now : Date {
+        get {
+            return testNow ?? Date()
+        }
+    }
     func isNowAfter(_ date: Date) -> Bool {
-        return now?.isAfter(date) ?? true
+        return testNow?.isAfter(date) ?? true
     }
     
     func isNowBefore(_ date: Date) -> Bool {
-        return now?.isBefore(date) ?? true
+        return testNow?.isBefore(date) ?? true
     }
 }
