@@ -119,7 +119,6 @@ class DefaultTrustlistService : TrustlistService {
         }
         var request = URLRequest(url: url)
         request.addValue("application/octet-stream", forHTTPHeaderField: "Accept")
-        request.cachePolicy = .returnCacheDataElseLoad
         return request
     }
     
