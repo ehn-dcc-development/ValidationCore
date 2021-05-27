@@ -62,8 +62,8 @@ class TestDataProvider {
     }
     
     let additionalTestData = """
-        []
-        """
+[]
+"""
 }
 
 struct TestData {
