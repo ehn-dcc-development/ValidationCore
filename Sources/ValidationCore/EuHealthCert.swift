@@ -44,12 +44,12 @@ public struct EuHealthCert : Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.person = try container.decode(Person.self, forKey: .person)
         let version = try container.decode(String.self, forKey: .version)
-        guard version.range(of: "^\\d+.\\d+.\\d+$", options: .regularExpression) != nil else {
+        guard version.conformsTo(regex: "^\\d+.\\d+.\\d+$") else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.version = version
         let dateOfBirth = try container.decode(String.self, forKey: .dateOfBirth)
-        guard dateOfBirth.range(of: "(19|20)\\d{2}-\\d{2}-\\d{2}", options: .regularExpression) != nil else {
+        guard dateOfBirth.conformsTo(regex: "(19|20)\\d{2}-\\d{2}-\\d{2}") else { 
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.dateOfBirth = dateOfBirth
@@ -79,7 +79,7 @@ public struct Person : Codable {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.standardizedGivenName = try? container.decode(String.self, forKey: .standardizedGivenName)
-        if let standardizedGivenName = standardizedGivenName, standardizedGivenName.range(of: "^[A-Z<]*$", options: .regularExpression) == nil {
+        if let standardizedGivenName = standardizedGivenName, !standardizedGivenName.conformsTo(regex: "^[A-Z<]*$") {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.familyName = try? container.decode(String.self, forKey: .familyName)
@@ -87,7 +87,7 @@ public struct Person : Codable {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.standardizedFamilyName = try container.decode(String.self, forKey: .standardizedFamilyName)
-        if standardizedFamilyName.range(of: "^[A-Z<]*$", options: .regularExpression) == nil {
+        if !standardizedFamilyName.conformsTo(regex: "^[A-Z<]*$") {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
     }
@@ -132,15 +132,12 @@ public struct Vaccination : Codable {
         guard 1..<10 ~= totalDoses else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
-        let vaccinationDate = try container.decode(String.self, forKey: .vaccinationDate)
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = .withFullDate
-        guard formatter.date(from: vaccinationDate) != nil else {
+        self.vaccinationDate = try container.decode(String.self, forKey: .vaccinationDate)
+        guard vaccinationDate.isValidIso8601Date() else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
-        self.vaccinationDate = vaccinationDate
         self.country = try container.decode(String.self, forKey: .country)
-        guard country.range(of: "[A-Z]{1,10}", options: .regularExpression) != nil else {
+        guard country.conformsTo(regex: "[A-Z]{1,10}") else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.certificateIssuer = try container.decode(String.self, forKey: .certificateIssuer)
@@ -155,7 +152,7 @@ public struct Vaccination : Codable {
 }
 
 public struct Test : Codable {
-    public let disease: String
+    public let disease: DiseaseAgentTargeted
     public let type: TestType
     public let testName: String?
     public let manufacturer: TestManufacturer?
@@ -183,21 +180,19 @@ public struct Test : Codable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.disease = try container.decode(String.self, forKey: .disease)
+        self.disease = try container.decode(DiseaseAgentTargeted.self, forKey: .disease)
         self.type = try container.decode(TestType.self, forKey: .type)
         self.testName = try? container.decode(String.self, forKey: .testName)
         
         self.manufacturer = try? container.decode(TestManufacturer.self, forKey: .manufacturer)
-        let timestampSample = try container.decode(String.self, forKey: .timestampSample)
-        guard ISO8601DateFormatter().date(from: timestampSample) != nil else {
+        self.timestampSample = try container.decode(String.self, forKey: .timestampSample)
+        guard timestampSample.isValidIso8601DateTime() else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
-        self.timestampSample = timestampSample
-        let timestampResult = try? container.decode(String.self, forKey: .timestampResult )
-        if let timestampResult = timestampResult, ISO8601DateFormatter().date(from: timestampResult) == nil {
+        self.timestampResult = try? container.decode(String.self, forKey: .timestampResult )
+        if let timestampResult = timestampResult, !timestampResult.isValidIso8601DateTime() {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
-        self.timestampResult = timestampResult
         self.result = try container.decode(TestResult.self, forKey: .result)
         let testCenter = try container.decode(String.self, forKey: .testCenter)
         guard testCenter.count <= SCHEMA_LENGTH_LIMIT else {
@@ -205,7 +200,7 @@ public struct Test : Codable {
         }
         self.testCenter = testCenter
         self.country = try container.decode(String.self, forKey: .country)
-        guard country.range(of: "[A-Z]{1,10}", options: .regularExpression) != nil else {
+        guard country.conformsTo(regex: "[A-Z]{1,10}") else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.certificateIssuer = try container.decode(String.self, forKey: .certificateIssuer)
@@ -243,22 +238,20 @@ public struct Recovery : Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.disease = try container.decode(DiseaseAgentTargeted.self, forKey: .disease)
         let dateFirstPositiveTest = try container.decode(String.self, forKey: .dateFirstPositiveTest)
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = .withFullDate
-        guard formatter.date(from: dateFirstPositiveTest) != nil else {
+        guard dateFirstPositiveTest.isValidIso8601Date() else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.dateFirstPositiveTest = dateFirstPositiveTest
         self.countryOfTest = try container.decode(String.self, forKey: .countryOfTest)
-        guard countryOfTest.range(of: "[A-Z]{1,10}", options: .regularExpression) != nil else {
+        guard countryOfTest.conformsTo(regex: "[A-Z]{1,10}") else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.validFrom = try container.decode(String.self, forKey: .validFrom)
-        guard formatter.date(from: validFrom) != nil else {
+        guard validFrom.isValidIso8601Date() else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.validUntil = try container.decode(String.self, forKey: .validUntil)
-        guard formatter.date(from: validUntil) != nil else {
+        guard validUntil.isValidIso8601Date() else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.certificateIssuer = try container.decode(String.self, forKey: .certificateIssuer)

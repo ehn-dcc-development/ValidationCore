@@ -33,3 +33,21 @@ extension Date {
         return distance(to: date) < 0
     }
 }
+
+extension String {
+    func isValidIso8601Date() -> Bool {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = .withFullDate
+        return formatter.date(from: self) != nil
+    }
+    
+    func isValidIso8601DateTime() -> Bool {
+        let fractionalFormatter = ISO8601DateFormatter()
+        fractionalFormatter.formatOptions = .withFractionalSeconds
+        return fractionalFormatter.date(from: self) != nil || ISO8601DateFormatter().date(from: self) != nil
+    }
+    
+    func conformsTo(regex: String) -> Bool {
+        return self.range(of: regex, options: .regularExpression) != nil
+    }
+}
