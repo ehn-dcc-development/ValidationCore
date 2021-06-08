@@ -7,23 +7,24 @@
 
 import Foundation
 
-public enum ValidationError : Error, Equatable {
-    case GENERAL_ERROR
-    case INVALID_SCHEME_PREFIX
-    case DECOMPRESSION_FAILED
-    case BASE_45_DECODING_FAILED
-    case COSE_DESERIALIZATION_FAILED
-    case CBOR_DESERIALIZATION_FAILED
-    case CWT_EXPIRED
-    case QR_CODE_ERROR
-    case CERTIFICATE_QUERY_FAILED
-    case USER_CANCELLED
-    case TRUST_SERVICE_ERROR(cause: String)
-    case KEY_NOT_IN_TRUST_LIST
-    case PUBLIC_KEY_EXPIRED
-    case UNSUITABLE_PUBLIC_KEY_TYPE
-    case KEY_CREATION_ERROR
-    case KEYSTORE_ERROR(cause: String)
+public enum ValidationError : String, Error, Codable {
+    case GENERAL_ERROR = "GENERAL_ERROR"
+    case INVALID_SCHEME_PREFIX = "INVALID_SCHEME_PREFIX"
+    case DECOMPRESSION_FAILED = "DECOMPRESSION_FAILED"
+    case BASE_45_DECODING_FAILED = "BASE_45_DECODING_FAILED"
+    case COSE_DESERIALIZATION_FAILED = "COSE_DESERIALIZATION_FAILED"
+    case CBOR_DESERIALIZATION_FAILED = "CBOR_DESERIALIZATION_FAILED"
+    case CWT_EXPIRED = "CWT_EXPIRED"
+    case QR_CODE_ERROR = "QR_CODE_ERROR"
+    case CERTIFICATE_QUERY_FAILED = "CERTIFICATE_QUERY_FAILED"
+    case USER_CANCELLED = "USER_CANCELLED"
+    case TRUST_SERVICE_ERROR = "TRUST_SERVICE_ERROR"
+    case KEY_NOT_IN_TRUST_LIST = "KEY_NOT_IN_TRUST_LIST"
+    case PUBLIC_KEY_EXPIRED = "PUBLIC_KEY_EXPIRED"
+    case UNSUITABLE_PUBLIC_KEY_TYPE = "UNSUITABLE_PUBLIC_KEY_TYPE"
+    case KEY_CREATION_ERROR = "KEY_CREATION_ERROR"
+    case KEYSTORE_ERROR = "KEYSTORE_ERROR"
+    case SIGNATURE_INVALID = "SIGNATURE_INVALID"
     
 
     public var message : String {
@@ -38,12 +39,13 @@ public enum ValidationError : Error, Equatable {
         case .QR_CODE_ERROR: return "QR code error"
         case .CERTIFICATE_QUERY_FAILED: return "Signing certificate query failed"
         case .USER_CANCELLED: return "User cancelled"
-        case .TRUST_SERVICE_ERROR(let cause): return cause
+        case .TRUST_SERVICE_ERROR: return "Trust Service Error"
         case .KEY_NOT_IN_TRUST_LIST: return "Key not in trust list"
         case .PUBLIC_KEY_EXPIRED: return "Public key expired"
         case .UNSUITABLE_PUBLIC_KEY_TYPE: return "Key unsuitable for EHN certificate type"
         case .KEY_CREATION_ERROR: return "Cannot create key from data"
-        case .KEYSTORE_ERROR(let cause): return cause
+        case .SIGNATURE_INVALID: return "Signature is not valid"
+        case .KEYSTORE_ERROR: return "Keystore error"
         }
     }
 }

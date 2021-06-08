@@ -68,18 +68,18 @@ class DefaultTrustlistService : TrustlistService {
     
     private func updateTrustlist(for hash: Data, _ completionHandler: @escaping (ValidationError?)->()) {
         guard let request = self.defaultRequest(to: self.TRUST_LIST_PATH) else {
-            completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot create request to trustlist service."))
+            completionHandler(.TRUST_SERVICE_ERROR)
             return
         }
         
         URLSession.shared.dataTask(with: request) { body, response, error in
             guard self.isResponseValid(response, error), let body = body else {
                 DDLogError("Cannot query trustlist service")
-                completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot renew trustlist: \(error?.localizedDescription ?? "")"))
+                completionHandler(.TRUST_SERVICE_ERROR)
                 return
             }
             guard self.refreshTrustlist(from: body, for: hash) else {
-                completionHandler(.TRUST_SERVICE_ERROR(cause: "Cannot create valid trustlist from response body"))
+                completionHandler(.TRUST_SERVICE_ERROR)
                 return
             }
             completionHandler(nil)
@@ -88,25 +88,25 @@ class DefaultTrustlistService : TrustlistService {
     
     private func updateDetachedSignature(completionHandler: @escaping (Result<Data, ValidationError>)->()) {
         guard let request = defaultRequest(to: SIGNATURE_PATH) else {
-            completionHandler(.failure(.TRUST_SERVICE_ERROR(cause: "Cannot create request to trustlist service.")))
+            completionHandler(.failure(.TRUST_SERVICE_ERROR))
             return
         }
         
         URLSession.shared.dataTask(with: request) { body, response, error in
             guard self.isResponseValid(response, error), let body = body else {
-                completionHandler(.failure(.TRUST_SERVICE_ERROR(cause: "Error in trustlist service response: \(error?.localizedDescription ?? "")")))
+                completionHandler(.failure(.TRUST_SERVICE_ERROR))
                 return
             }
             guard let cose = Cose(from: body),
                   let trustAnchorKey = self.trustAnchorKey(),
                   cose.hasValidSignature(for: trustAnchorKey) else {
-                completionHandler(.failure(.TRUST_SERVICE_ERROR(cause: "Invalid COSE in trustlist service response.")))
+                completionHandler(.failure(.TRUST_SERVICE_ERROR))
                 return
             }
             guard let cwt = CWT(from: cose.payload),
                   cwt.isValid(using: self.dateService),
                   let trustlistHash = cwt.sub else {
-                completionHandler(.failure(.TRUST_SERVICE_ERROR(cause: "Invalid CWT in trustlist service response.")))
+                completionHandler(.failure(.TRUST_SERVICE_ERROR))
                 return
             }
             completionHandler(.success(trustlistHash))

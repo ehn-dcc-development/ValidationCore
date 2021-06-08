@@ -13,7 +13,7 @@ import Foundation
 public struct ValidationCore {
     private let PREFIX = "HC1:"
 
-    private var completionHandler : ((Result<ValidationResult, ValidationError>) -> ())?
+    private var completionHandler : ((ValidationResult) -> ())?
     #if canImport(UIKit)
     private var scanner : QrCodeScanner?
     #endif
@@ -31,7 +31,7 @@ public struct ValidationCore {
     
     #if canImport(UIKit)
     /// Instantiate a QR code scanner and validate the scannned EHN health certificate
-    public mutating func validateQrCode(_ qrView : UIView, _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()){
+    public mutating func validateQrCode(_ qrView : UIView, _ completionHandler: @escaping (ValidationResult) -> ()){
         self.completionHandler = completionHandler
         self.scanner = QrCodeScanner()
         scanner?.scan(qrView, self)
@@ -39,46 +39,48 @@ public struct ValidationCore {
     #endif
     
     /// Validate an Base45-encoded EHN health certificate
-    public func validate(encodedData: String, _ completionHandler: @escaping (Result<ValidationResult, ValidationError>) -> ()) {
+    public func validate(encodedData: String, _ completionHandler: @escaping (ValidationResult) -> ()) {
         DDLogInfo("Starting validation")
         guard let unprefixedEncodedString = removeScheme(prefix: PREFIX, from: encodedData) else {
-            completionHandler(.failure(.INVALID_SCHEME_PREFIX))
+            completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .INVALID_SCHEME_PREFIX))
             return
         }
         
         guard let decodedData = decode(unprefixedEncodedString) else {
-            completionHandler(.failure(.BASE_45_DECODING_FAILED))
+            completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .BASE_45_DECODING_FAILED))
             return
         }
         DDLogDebug("Base45-decoded data: \(decodedData.humanReadable())")
         
         guard let decompressedData = decompress(decodedData) else {
-            completionHandler(.failure(.DECOMPRESSION_FAILED))
+            completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .DECOMPRESSION_FAILED))
             return
         }
         DDLogDebug("Decompressed data: \(decompressedData.humanReadable())")
 
         guard let cose = cose(from: decompressedData),
               let keyId = cose.keyId else {
-            completionHandler(.failure(.COSE_DESERIALIZATION_FAILED))
+            completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .COSE_DESERIALIZATION_FAILED))
             return
         }
         
         guard let cwt = CWT(from: cose.payload),
               let euHealthCert = cwt.euHealthCert else {
-            completionHandler(.failure(.CBOR_DESERIALIZATION_FAILED))
+            completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .CBOR_DESERIALIZATION_FAILED))
             return
         }
         
         guard cwt.isValid(using: dateService) else {
-            completionHandler(.failure(.CWT_EXPIRED))
+            completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: .CWT_EXPIRED))
             return
         }
 
         trustlistService.key(for: keyId, keyType: euHealthCert.type) { result in
             switch result {
-            case .success(let key): completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: key), payload: euHealthCert)))
-            case .failure(let error): completionHandler(.failure(error))
+            case .success(let key):
+                let isSignatureValid = cose.hasValidSignature(for: key)
+                completionHandler(ValidationResult(isValid: isSignatureValid, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: isSignatureValid ? nil : .SIGNATURE_INVALID))
+            case .failure(let error): completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: error))
             }
         }
     }
@@ -120,7 +122,7 @@ public struct ValidationCore {
 extension ValidationCore : QrCodeReceiver {
     public func canceled() {
         DDLogDebug("QR code scanning cancelled.")
-        completionHandler?(.failure(.USER_CANCELLED))
+        completionHandler?(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .USER_CANCELLED))
     }
     
     /// Process the scanned EHN health certificate
@@ -128,7 +130,7 @@ extension ValidationCore : QrCodeReceiver {
         guard let result = result,
               let completionHandler = self.completionHandler else {
             DDLogError("Cannot read QR code.")
-            self.completionHandler?(.failure(.QR_CODE_ERROR))
+            self.completionHandler?(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .QR_CODE_ERROR))
             return
         }
         validate(encodedData: result, completionHandler)

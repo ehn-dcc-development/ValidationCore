@@ -48,17 +48,14 @@ struct CWT {
     }
     
     func isValid(using dateService: DateService) -> Bool {
-        guard let exp = exp else {
+        guard let expDate = exp?.toDate() else {
             return false
         }
-        let expDate = Date(timeIntervalSince1970: TimeInterval(exp))
         var isValid = dateService.isNowBefore(expDate)
-        if let iat = iat {
-           let iatDate = Date(timeIntervalSince1970: TimeInterval(iat))
+        if let iatDate = iat?.toDate() {
             isValid = isValid && dateService.isNowAfter(iatDate)
         }
-        if let nbf = nbf {
-            let nbfDate = Date(timeIntervalSince1970: TimeInterval(nbf))
+        if let nbfDate = nbf?.toDate() {
             isValid = isValid && dateService.isNowAfter(nbfDate)
         }
         return isValid

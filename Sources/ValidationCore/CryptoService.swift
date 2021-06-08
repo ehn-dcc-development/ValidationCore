@@ -16,11 +16,11 @@ public struct CryptoService {
     public static func generateSymmetricKey(for alias: String, completionHandler : @escaping (ValidationError?)->()) throws {
         authenticate() { authContext, error in
             guard error == nil, let authContext = authContext else {
-                completionHandler(.KEYSTORE_ERROR(cause: "Authentication failed"))
+                completionHandler(.KEYSTORE_ERROR)
                 return
             }
             guard let _ = createKey(for: alias, with: authContext) else {
-                completionHandler(.KEYSTORE_ERROR(cause: "Cannot create key"))
+                completionHandler(.KEYSTORE_ERROR)
                 return
             }
             completionHandler(nil)
@@ -30,12 +30,12 @@ public struct CryptoService {
     public static func createKeyAndEncrypt(data: Data, with keyAlias: String, completionHandler : @escaping (Result<Data, ValidationError>)->()) {
         let authContext = LAContext()
         guard let key = createKey(for: keyAlias, with: authContext) else {
-            completionHandler(.failure(.KEYSTORE_ERROR(cause: "Cannot create key")))
+            completionHandler(.failure(.KEYSTORE_ERROR))
             return
         }
         
         guard let sealed = try? AES.GCM.seal(data, using: key).combined else {
-            completionHandler(.failure(.KEYSTORE_ERROR(cause: "Cannot encrypt data")))
+            completionHandler(.failure(.KEYSTORE_ERROR))
             return
         }
         completionHandler(.success(sealed))
@@ -43,13 +43,13 @@ public struct CryptoService {
     
     public static func decrypt(ciphertext: Data, with keyAlias: String, completionHandler : @escaping (Result<Data, ValidationError>)->()) {
         guard let key = try? loadKey(alias: keyAlias) else {
-            completionHandler(.failure(.KEYSTORE_ERROR(cause: "Cannot retrieve key from keychain")))
+            completionHandler(.failure(.KEYSTORE_ERROR))
             return
         }
         
         guard let sealed = try? AES.GCM.SealedBox(combined: ciphertext),
               let opened = try? AES.GCM.open(sealed, using: key) else {
-            completionHandler(.failure(.KEYSTORE_ERROR(cause: "Cannot decrypt data")))
+            completionHandler(.failure(.KEYSTORE_ERROR))
             return
         }
         completionHandler(.success(opened))
@@ -81,7 +81,7 @@ public struct CryptoService {
                 kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
                 [],
                 nil) else {
-            throw ValidationError.KEYSTORE_ERROR(cause: "Cannot create access flags.")
+            throw ValidationError.KEYSTORE_ERROR
         }
         let query = [kSecClass: kSecClassGenericPassword,
                      kSecAttrLabel: alias,
@@ -90,7 +90,7 @@ public struct CryptoService {
         
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else {
-            throw ValidationError.KEYSTORE_ERROR(cause: "Cannot add key to keychain: \(status)")
+            throw ValidationError.KEYSTORE_ERROR
         }
     }
     
@@ -107,7 +107,7 @@ public struct CryptoService {
             }
             return try SymmetricKey(rawRepresentation: data)
         case errSecItemNotFound: return nil
-        case let status: throw ValidationError.KEYSTORE_ERROR(cause: "Cannot retrieve key from keychain: \(status)")
+        default: throw ValidationError.KEYSTORE_ERROR
         }
     }
     

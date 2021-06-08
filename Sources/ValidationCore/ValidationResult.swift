@@ -7,7 +7,9 @@
 
 import Foundation
 
-public struct ValidationResult {
+public struct ValidationResult : Codable {
     public let isValid : Bool
-    public let payload : EuHealthCert
+    public let metaInformation : MetaInfo?
+    public let greenpass : EuHealthCert?
+    public let error : ValidationError?
 }

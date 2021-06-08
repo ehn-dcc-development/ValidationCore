@@ -51,3 +51,16 @@ extension String {
         return self.range(of: regex, options: .regularExpression) != nil
     }
 }
+
+extension UInt64 {
+    func toDate() -> Date? {
+        return Date(timeIntervalSince1970: TimeInterval(self))
+    }
+    
+    func toIso8601DateString() -> String? {
+        guard let date = self.toDate() else {
+            return nil
+        }
+        return ISO8601DateFormatter().string(from: date)
+    }
+}
