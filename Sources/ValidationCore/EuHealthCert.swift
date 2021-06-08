@@ -49,7 +49,7 @@ public struct EuHealthCert : Codable {
         }
         self.version = version
         let dateOfBirth = try container.decode(String.self, forKey: .dateOfBirth)
-        guard dateOfBirth.conformsTo(regex: "(19|20)\\d{2}-\\d{2}-\\d{2}") else { 
+        guard dateOfBirth.conformsTo(regex: "^(19|20)\\d\\d(-\\d\\d){0,2}$") else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.dateOfBirth = dateOfBirth
