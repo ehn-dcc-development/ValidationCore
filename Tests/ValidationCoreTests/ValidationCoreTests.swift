@@ -10,7 +10,7 @@ import ValidationCore
 class ValidationCoreSpec: QuickSpec {
     
     override func spec() {
-        describe("The validation core") {
+        describe("Validation") {
             
             var validationCore : ValidationCore!
             let testDataProvider : TestDataProvider! = TestDataProvider()
@@ -18,32 +18,30 @@ class ValidationCoreSpec: QuickSpec {
             beforeEach {
             }
             
-            context("generated"){
-                for testData in testDataProvider.testData {
-                    it(testData.testContext.description) {
-                        let dateService = TestDateService(testData)
-                        let trustlistService = TestTrustlistService(testData.testContext, dateService: dateService)
-                        validationCore = ValidationCore(trustlistService: trustlistService, dateService: dateService)
-                        guard let prefixedEncodedCert = testData.prefixed else {
-                            XCTFail("QR code payload missing")
-                            return
+            for testData in testDataProvider.testData {
+                it(testData.testContext.description) {
+                    let dateService = TestDateService(testData)
+                    let trustlistService = TestTrustlistService(testData, dateService: dateService)
+                    validationCore = ValidationCore(trustlistService: trustlistService, dateService: dateService)
+                    guard let prefixedEncodedCert = testData.prefixed else {
+                        XCTFail("QR code payload missing")
+                        return
+                    }
+                    validationCore.validate(encodedData: prefixedEncodedCert) { result in
+                        if let error = result.error {
+                            self.map(error, to: testData.expectedResults)
                         }
-                        validationCore.validate(encodedData: prefixedEncodedCert) { result in
-                            switch result {
-                            case .success(let validationResult): self.map(validationResult, to: testData)
-                            case .failure(let error): self.map(error, to: testData.expectedResults)
-                            }
-                        }
+                        self.map(result, to: testData)
                     }
                 }
             }
         }
     }
-
+    
     private func map(_ validationResult: ValidationResult, to testData: EuTestData){
         let expectedResults = testData.expectedResults
         if true == expectedResults.isSchemeValidatable {
-            expect(validationResult.payload).to(beHealthCert(testData.jsonContent))
+            expect(validationResult.greenpass).to(beHealthCert(testData.jsonContent))
         }
         
         if let verifiable = expectedResults.isVerifiable {
@@ -62,7 +60,7 @@ class ValidationCoreSpec: QuickSpec {
             expect(error).to(beError(.CWT_EXPIRED))
         }
         if false == expectedResults.isVerifiable {
-            expect(error).to(beError(.COSE_DESERIALIZATION_FAILED))
+            expect(error).to(satisfyAnyOf(beError(.COSE_DESERIALIZATION_FAILED), beError(.SIGNATURE_INVALID)))
         }
         if false == expectedResults.isDecodable {
             expect(error).to(beError(.CBOR_DESERIALIZATION_FAILED))

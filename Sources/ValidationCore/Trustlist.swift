@@ -31,10 +31,13 @@ public struct TrustEntry : Codable {
     let cert: Data
     let keyId: Data
     
-    private let OID_TEST = "1.3.6.1.4.1.0.1847.2021.1.1"
-    private let OID_VACCINATION = "1.3.6.1.4.1.0.1847.2021.1.2"
-    private let OID_RECOVERY = "1.3.6.1.4.1.0.1847.2021.1.3"
-    
+    private let OID_TEST = "1.3.6.1.4.1.1847.2021.1.1"
+    private let OID_ALT_TEST = "1.3.6.1.4.1.0.1847.2021.1.1"
+    private let OID_VACCINATION = "1.3.6.1.4.1.1847.2021.1.2"
+    private let OID_ALT_VACCINATION = "1.3.6.1.4.1.0.1847.2021.1.2"
+    private let OID_RECOVERY = "1.3.6.1.4.1.1847.2021.1.3"
+    private let OID_ALT_RECOVERY = "1.3.6.1.4.1.0.1847.2021.1.3"
+
     enum CodingKeys: String, CodingKey {
         case cert = "c"
         case keyId = "i"
@@ -52,11 +55,11 @@ public struct TrustEntry : Codable {
         if isType(in: certificate) {
             switch certType {
             case .test:
-                return nil != certificate.extensionObject(oid: OID_TEST)
+                return nil != certificate.extensionObject(oid: OID_TEST) || nil != certificate.extensionObject(oid: OID_ALT_TEST)
             case .vaccination:
-                return nil != certificate.extensionObject(oid: OID_VACCINATION)
+                return nil != certificate.extensionObject(oid: OID_VACCINATION) || nil != certificate.extensionObject(oid: OID_ALT_VACCINATION)
             case .recovery:
-                return nil != certificate.extensionObject(oid: OID_RECOVERY)
+                return nil != certificate.extensionObject(oid: OID_RECOVERY) || nil != certificate.extensionObject(oid: OID_ALT_RECOVERY)
             }
         }
         return true

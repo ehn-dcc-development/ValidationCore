@@ -11,10 +11,12 @@ import ValidationCore
 class TestTrustlistService {
     let dateService : DateService
     let encodedCert : String?
+    let testData : EuTestData
     
-    init(_ testContext: TestContext, dateService: DateService){
+    init(_ testData: EuTestData, dateService: DateService){
         self.dateService = dateService
-        encodedCert = testContext.signingCertificate
+        self.testData = testData
+        encodedCert = testData.testContext.signingCertificate
     }
     
 }
@@ -28,7 +30,7 @@ extension TestTrustlistService: TrustlistService {
         }
         
         let entry = TrustEntry(cert: cert)
-        guard entry.isValid(for: dateService) else {
+        guard testData.expectedResults.isExpired == nil || entry.isValid(for: dateService) else {
             completionHandler(.failure(.PUBLIC_KEY_EXPIRED))
             return
         }
