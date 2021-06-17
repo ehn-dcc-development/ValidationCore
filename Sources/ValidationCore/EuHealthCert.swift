@@ -94,10 +94,10 @@ public struct Person : Codable {
 }
 
 public struct Vaccination : Codable {
-    public let disease: DiseaseAgentTargeted
-    public let vaccine: VaccineProphylaxis
-    public let medicinialProduct: VaccineMedicinialProduct
-    public let marketingAuthorizationHolder: VaccineManufacturer
+    public let disease: String
+    public let vaccine: String
+    public let medicinialProduct: String
+    public let marketingAuthorizationHolder: String
     public let doseNumber: UInt64
     public let totalDoses: UInt64
     public let vaccinationDate: String
@@ -120,10 +120,10 @@ public struct Vaccination : Codable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.disease = try container.decode(DiseaseAgentTargeted.self, forKey: .disease)
-        self.vaccine = try container.decode(VaccineProphylaxis.self, forKey: .vaccine)
-        self.medicinialProduct = try container.decode(VaccineMedicinialProduct.self, forKey: .medicinialProduct)
-        self.marketingAuthorizationHolder = try container.decode(VaccineManufacturer.self, forKey: .marketingAuthorizationHolder)
+        self.disease = try container.decode(String.self, forKey: .disease)
+        self.vaccine = try container.decode(String.self, forKey: .vaccine)
+        self.medicinialProduct = try container.decode(String.self, forKey: .medicinialProduct)
+        self.marketingAuthorizationHolder = try container.decode(String.self, forKey: .marketingAuthorizationHolder)
         self.doseNumber = try container.decode(UInt64.self, forKey: .doseNumber)
         guard 1..<10 ~= doseNumber else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
@@ -152,13 +152,13 @@ public struct Vaccination : Codable {
 }
 
 public struct Test : Codable {
-    public let disease: DiseaseAgentTargeted
-    public let type: TestType
+    public let disease: String
+    public let type: String
     public let testName: String?
-    public let manufacturer: TestManufacturer?
+    public let manufacturer: String?
     public let timestampSample: String
     public let timestampResult : String?
-    public let result: TestResult
+    public let result: String
     public let testCenter: String
     public let country: String
     public let certificateIssuer: String
@@ -180,11 +180,11 @@ public struct Test : Codable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.disease = try container.decode(DiseaseAgentTargeted.self, forKey: .disease)
-        self.type = try container.decode(TestType.self, forKey: .type)
+        self.disease = try container.decode(String.self, forKey: .disease)
+        self.type = try container.decode(String.self, forKey: .type)
         self.testName = try? container.decode(String.self, forKey: .testName)
         
-        self.manufacturer = try? container.decode(TestManufacturer.self, forKey: .manufacturer)
+        self.manufacturer = try? container.decode(String.self, forKey: .manufacturer)
         self.timestampSample = try container.decode(String.self, forKey: .timestampSample)
         guard timestampSample.isValidIso8601DateTime() else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
@@ -193,7 +193,7 @@ public struct Test : Codable {
         if let timestampResult = timestampResult, !timestampResult.isValidIso8601DateTime() {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
-        self.result = try container.decode(TestResult.self, forKey: .result)
+        self.result = try container.decode(String.self, forKey: .result)
         let testCenter = try container.decode(String.self, forKey: .testCenter)
         guard testCenter.count <= SCHEMA_LENGTH_LIMIT else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
@@ -216,7 +216,7 @@ public struct Test : Codable {
 }
 
 public struct Recovery : Codable {
-    public let disease: DiseaseAgentTargeted
+    public let disease: String
     public let dateFirstPositiveTest: String
     public let countryOfTest: String
     public let certificateIssuer: String
@@ -236,7 +236,7 @@ public struct Recovery : Codable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.disease = try container.decode(DiseaseAgentTargeted.self, forKey: .disease)
+        self.disease = try container.decode(String.self, forKey: .disease)
         let dateFirstPositiveTest = try container.decode(String.self, forKey: .dateFirstPositiveTest)
         guard dateFirstPositiveTest.isValidIso8601Date() else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
