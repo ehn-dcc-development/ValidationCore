@@ -85,6 +85,9 @@ public struct TrustEntry : Codable {
         return nil != certificate.extensionObject(oid: OID_TEST)
             || nil != certificate.extensionObject(oid: OID_VACCINATION)
             || nil != certificate.extensionObject(oid: OID_RECOVERY)
+            || nil != certificate.extensionObject(oid: OID_ALT_TEST)
+            || nil != certificate.extensionObject(oid: OID_ALT_VACCINATION)
+            || nil != certificate.extensionObject(oid: OID_ALT_RECOVERY)
     }
 }
 
