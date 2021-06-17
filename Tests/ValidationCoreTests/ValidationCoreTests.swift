@@ -30,8 +30,9 @@ class ValidationCoreSpec: QuickSpec {
                     validationCore.validate(encodedData: prefixedEncodedCert) { result in
                         if let error = result.error {
                             self.map(error, to: testData.expectedResults)
+                        } else {
+                            self.map(result, to: testData)
                         }
-                        self.map(result, to: testData)
                     }
                 }
             }
