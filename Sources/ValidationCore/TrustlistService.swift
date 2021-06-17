@@ -16,7 +16,7 @@ public protocol TrustlistService {
 }
 
 class DefaultTrustlistService : TrustlistService {
-    private let CERT_SERVICE_URL = "https://dgc.a-sit.at/ehn/cert/"
+    private let baseUrl : String
     private let TRUST_LIST_PATH = "listv2"
     private let SIGNATURE_PATH = "sigv2"
     private let TRUSTLIST_FILENAME = "trustlist"
@@ -24,22 +24,17 @@ class DefaultTrustlistService : TrustlistService {
     private let dateService : DateService
     private var cachedTrustlist : TrustList
     private let fileStorage : FileStorage
-    private let trustlistAnchor = """
-    MIIBJTCBy6ADAgECAgUAwvEVkzAKBggqhkjOPQQDAjAQMQ4wDAYDVQQDDAVFQy1N
-    ZTAeFw0yMTA0MjMxMTI3NDhaFw0yMTA1MjMxMTI3NDhaMBAxDjAMBgNVBAMMBUVD
-    LU1lMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/OV5UfYrtE140ztF9jOgnux1
-    oyNO8Bss4377E/kDhp9EzFZdsgaztfT+wvA29b7rSb2EsHJrr8aQdn3/1ynte6MS
-    MBAwDgYDVR0PAQH/BAQDAgWgMAoGCCqGSM49BAMCA0kAMEYCIQC51XwstjIBH10S
-    N701EnxWGK3gIgPaUgBN+ljZAs76zQIhAODq4TJ2qAPpFc1FIUOvvlycGJ6QVxNX
-    EkhRcgdlVfUb
-    """.replacingOccurrences(of: "\n", with: "")
+    private let trustlistAnchor : String
     
     
-    init(dateService: DateService) {
+    init(dateService: DateService, trustlistUrl: String, trustAnchor: String) {
+        baseUrl = trustlistUrl
+        trustlistAnchor = trustAnchor
         self.fileStorage = FileStorage()
         cachedTrustlist = TrustList()
         self.dateService = dateService
         self.loadCachedTrustlist()
+        updateTrustlistIfNecessary() { _ in }
     }
     
     public func key(for keyId: Data, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>)->()){
@@ -114,7 +109,7 @@ class DefaultTrustlistService : TrustlistService {
     }
     
     private func defaultRequest(to path: String) -> URLRequest? {
-        guard let url = URL(string: "\(CERT_SERVICE_URL)\(path)") else {
+        guard let url = URL(string: "\(baseUrl)\(path)") else {
             return nil
         }
         var request = URLRequest(url: url)
