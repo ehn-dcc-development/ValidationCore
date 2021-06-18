@@ -48,14 +48,20 @@ public struct EuHealthCert : Codable {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.version = version
-        let dateOfBirth = try container.decode(String.self, forKey: .dateOfBirth)
-        guard dateOfBirth.conformsTo(regex: "^(19|20)\\d\\d(-\\d\\d){0,2}$") else { 
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
+        var dateOfBirth = try container.decode(String.self, forKey: .dateOfBirth)
+        if !dateOfBirth.isEmpty {
+            dateOfBirth = dateOfBirth.replacingOccurrences(of: "T00:00:00", with: "")
+            guard dateOfBirth.conformsTo(regex: "^(19|20)\\d\\d(-\\d\\d){0,2}$") else {
+                throw ValidationError.CBOR_DESERIALIZATION_FAILED
+            }
         }
         self.dateOfBirth = dateOfBirth
-        self.vaccinations = try? container.decode([Vaccination].self, forKey: .vaccinations)
-        self.tests = try? container.decode([Test].self, forKey: .tests)
-        self.recovery = try? container.decode([Recovery].self, forKey: .recovery)
+        let vaccinations = try? container.decode([Vaccination].self, forKey: .vaccinations)
+        self.vaccinations = (vaccinations != nil && !vaccinations!.isEmpty) ? vaccinations : nil
+        let tests = try? container.decode([Test].self, forKey: .tests)
+        self.tests = (tests != nil && !tests!.isEmpty) ? tests : nil
+        let recovery = try? container.decode([Recovery].self, forKey: .recovery)
+        self.recovery = (recovery != nil && !recovery!.isEmpty) ? recovery : nil
     }
 }
 
