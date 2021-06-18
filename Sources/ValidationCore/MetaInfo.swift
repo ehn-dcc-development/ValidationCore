@@ -8,9 +8,9 @@
 import Foundation
 
 public struct MetaInfo : Codable {
-    let expirationTime : String?
-    let issuedAt : String?
-    let issuer : String?
+    public let expirationTime : String?
+    public let issuedAt : String?
+    public let issuer : String?
     
     init(from cwt: CWT) {
         expirationTime = cwt.exp?.toIso8601DateString()
