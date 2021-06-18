@@ -21,9 +21,12 @@ class TestDataProvider {
         decoder.dateDecodingStrategy = .custom { decoder in
             let value = try decoder.singleValueContainer()
             let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = .withFractionalSeconds
-            let iso8601FractionalSecondString = try value.decode(String.self)
-            return formatter.date(from: iso8601FractionalSecondString)!
+            let isoString = try value.decode(String.self)
+            if let date = formatter.date(from: isoString) {
+                return date
+            }
+            formatter.formatOptions = [.withFractionalSeconds]
+            return formatter.date(from: isoString)!
         }
         return decoder
     }
@@ -64,6 +67,28 @@ class TestDataProvider {
     let additionalTestData = """
 []
 """
+    
+    
+    public var x509TestData : EuTestData {
+        get {
+            let jsonData = """
+            {
+                "PREFIX": "HC1:NCFTW2BM75VOO10KHHCUGEE45HB/J0DUIXEUKPAKGSITRD4PH.L0+6R.6USQN$9Q39V$K B9N3B2J7E31UN7ECHOXN5HM9QN$L9L-OWE4UNN88RTCVDCQF1E  NDLSUMBG%RVPBX*O4LT0B8NKF2WTR:5Z3EA-ND9IW$2:U7U$FOU6UVT2Y2/URB2NFPDT2J112748%F1+FNZDAI627U66I07VH7/BHE1E33CGCHGCD61Y6B JD1GINNG2Q39613E1Q-9B8G.SM1M8-EF1R8I64+E06/96QS9YP1D2%XK0SCBQRDFIBEGID1W34THEKFL36PX:G9TAB5F6UE/*SD3M4.BOLJ62WL23.4MXWN41BW37$DM:7E.QL%QLNDQN5NG8LWTD4KP8DB47TZX4-:P%E64NIJNOTYQNUAKL19TTZ/KM+D.%O+THCSL:%D%R41A65$GX720QRUE9K3M-UJ:/AWYBV3Q-L67VP1CN*GFN$VQ K9XLYQ81QUNOC4WR6NJK1OCUD2UT3XPY5MG6LW:B0GWU5N$J7QMNPAWX-1EQAMAFVZV4:M/*0:.943BX*PO7KIXRR7LG46Y%V WHMKH",
+                "TESTCTX": {
+                    "VERSION": 1,
+                    "SCHEMA": "1.0.0",
+                    "CERTIFICATE": "MIIBWDCB/6ADAgECAgRsvRZ/MAoGCCqGSM49BAMCMBAxDjAMBgNVBAMMBUVDLU1lMB4XDTIxMDUwMzE4MDAwMFoXDTIxMDYwMjE4MDAwMFowEDEOMAwGA1UEAwwFRUMtTWUwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQRS4GeBpNxSbvnbLY56NvXZ26gCJ2SwairBKQOuGqDTO3QMmyfNTH1sMg39aFDon51grJOyhKvEXXUaWD1LOLEo0cwRTAOBgNVHQ8BAf8EBAMCBaAwMwYDVR0lBCwwKgYMKwYBBAEAjjePZQEBBgwrBgEEAQCON49lAQIGDCsGAQQBAI43j2UBAzAKBggqhkjOPQQDAgNIADBFAiBjECR5mdD4++CGQGlV51CEhXjneiMvvVybCYrCjfES4QIhAMNHse2P4I9AokcT9D8pLEDdbbbTxjEvnjB/DFOb9Tho",
+                    "VALIDATIONCLOCK": "2021-05-03T18:01:00Z",
+                    "DESCRIPTION": "VALID: EC 256 key"
+                },
+                "EXPECTEDRESULTS": {
+                    "EXPECTEDEXPIRATIONCHECK": false
+                }
+            }
+            """.data(using: .utf8)!
+            return try! jsonDecoder().decode(EuTestData.self, from: jsonData)
+        }
+    }
 }
 
 struct TestData {

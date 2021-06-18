@@ -43,9 +43,9 @@ public struct TrustEntry : Codable {
         case keyId = "i"
     }
     
-    public init(cert: Data){
+    public init(cert: Data, keyId: Data = Data()){
         self.cert = cert
-        self.keyId = Data()
+        self.keyId = keyId
     }
     
     public func isSuitable(for certType: CertType) -> Bool {

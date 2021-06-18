@@ -10,7 +10,7 @@ import ValidationCore
 class ValidationCoreSpec: QuickSpec {
     
     override func spec() {
-        describe("Validation") {
+        describe("Compatibility Test") {
             
             var validationCore : ValidationCore!
             let testDataProvider : TestDataProvider! = TestDataProvider()
@@ -34,6 +34,23 @@ class ValidationCoreSpec: QuickSpec {
                             self.map(result, to: testData)
                         }
                     }
+                }
+            }
+        }
+        
+        describe("Functionality Test") {
+            var validationCore: ValidationCore!
+            let testDataProvider : TestDataProvider! = TestDataProvider()
+            
+            it("can verify signature using X509TrustlistService") {
+                let testData = testDataProvider.x509TestData
+                let dateService = TestDateService(testData)
+                let keyId = Data([172, 54, 144, 238, 131, 97, 204, 150])
+                let signatureCerts = [keyId:testData.testContext.signingCertificate!]
+                let x509TrustService = X509TrustlistService(base64Encoded: signatureCerts, dateService: dateService)
+                validationCore = ValidationCore(trustlistService: x509TrustService, dateService: dateService)
+                validationCore.validate(encodedData: testData.prefixed!) { result in
+                    expect(result.error).toEventually(beNil())
                 }
             }
         }
