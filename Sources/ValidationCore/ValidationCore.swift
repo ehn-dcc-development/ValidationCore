@@ -73,7 +73,7 @@ public struct ValidationCore {
             completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .COSE_DESERIALIZATION_FAILED))
             return
         }
-        DDLogDebug("KeyID: \(keyId)")
+        DDLogDebug("KeyID: \(keyId.encode())")
         
         guard let cwt = CWT(from: cose.payload),
               let euHealthCert = cwt.euHealthCert else {

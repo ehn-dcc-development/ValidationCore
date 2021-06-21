@@ -8,7 +8,6 @@
 import Foundation
 import SwiftCBOR
 
-fileprivate let SCHEMA_LENGTH_LIMIT = 50
 
 public struct EuHealthCert : Codable {
     public let person: Person
@@ -21,9 +20,9 @@ public struct EuHealthCert : Codable {
     var type : CertType {
         get {
             switch self {
-            case _ where nil != vaccinations:
+            case _ where nil != vaccinations && vaccinations?.count ?? 0 > 0:
                 return .vaccination
-            case _ where nil != recovery:
+            case _ where nil != recovery && recovery?.count ?? 0 > 0:
                 return .recovery
             default:
                 return .test
@@ -43,16 +42,8 @@ public struct EuHealthCert : Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.person = try container.decode(Person.self, forKey: .person)
-        let version = try container.decode(String.self, forKey: .version)
-        guard version.conformsTo(regex: "^\\d+.\\d+.\\d+$") else {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
-        self.version = version
-        let dateOfBirth = try container.decode(String.self, forKey: .dateOfBirth)
-        guard dateOfBirth.conformsTo(regex: "^(19|20)\\d\\d(-\\d\\d){0,2}$") else { 
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
-        self.dateOfBirth = dateOfBirth
+        self.version = try container.decode(String.self, forKey: .version)
+        self.dateOfBirth = try container.decode(String.self, forKey: .dateOfBirth)
         self.vaccinations = try? container.decode([Vaccination].self, forKey: .vaccinations)
         self.tests = try? container.decode([Test].self, forKey: .tests)
         self.recovery = try? container.decode([Recovery].self, forKey: .recovery)
@@ -75,21 +66,9 @@ public struct Person : Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.givenName = try? container.decode(String.self, forKey: .givenName)
-        if let givenName = givenName, givenName.count > SCHEMA_LENGTH_LIMIT {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
         self.standardizedGivenName = try? container.decode(String.self, forKey: .standardizedGivenName)
-        if let standardizedGivenName = standardizedGivenName, !standardizedGivenName.conformsTo(regex: "^[A-Z<]*$") {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
         self.familyName = try? container.decode(String.self, forKey: .familyName)
-        if let familyName = familyName, familyName.count > SCHEMA_LENGTH_LIMIT {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
         self.standardizedFamilyName = try container.decode(String.self, forKey: .standardizedFamilyName)
-        if !standardizedFamilyName.conformsTo(regex: "^[A-Z<]*$") {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
     }
 }
 
@@ -120,10 +99,10 @@ public struct Vaccination : Codable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.disease = try container.decode(String.self, forKey: .disease)
-        self.vaccine = try container.decode(String.self, forKey: .vaccine)
-        self.medicinialProduct = try container.decode(String.self, forKey: .medicinialProduct)
-        self.marketingAuthorizationHolder = try container.decode(String.self, forKey: .marketingAuthorizationHolder)
+        self.disease = try container.decode(String.self, forKey: .disease).trimmingCharacters(in: .whitespacesAndNewlines)
+        self.vaccine = try container.decode(String.self, forKey: .vaccine).trimmingCharacters(in: .whitespacesAndNewlines)
+        self.medicinialProduct = try container.decode(String.self, forKey: .medicinialProduct).trimmingCharacters(in: .whitespacesAndNewlines)
+        self.marketingAuthorizationHolder = try container.decode(String.self, forKey: .marketingAuthorizationHolder).trimmingCharacters(in: .whitespacesAndNewlines)
         self.doseNumber = try container.decode(UInt64.self, forKey: .doseNumber)
         guard 1..<10 ~= doseNumber else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
@@ -136,18 +115,9 @@ public struct Vaccination : Codable {
         guard vaccinationDate.isValidIso8601Date() else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
-        self.country = try container.decode(String.self, forKey: .country)
-        guard country.conformsTo(regex: "[A-Z]{1,10}") else {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
+        self.country = try container.decode(String.self, forKey: .country).trimmingCharacters(in: .whitespacesAndNewlines)
         self.certificateIssuer = try container.decode(String.self, forKey: .certificateIssuer)
-        guard certificateIssuer.count <= SCHEMA_LENGTH_LIMIT else {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
         self.certificateIdentifier = try container.decode(String.self, forKey: .certificateIdentifier)
-        guard certificateIdentifier.count <= SCHEMA_LENGTH_LIMIT else {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
     }
 }
 
@@ -180,37 +150,23 @@ public struct Test : Codable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.disease = try container.decode(String.self, forKey: .disease)
-        self.type = try container.decode(String.self, forKey: .type)
+        self.disease = try container.decode(String.self, forKey: .disease).trimmingCharacters(in: .whitespacesAndNewlines)
+        self.type = try container.decode(String.self, forKey: .type).trimmingCharacters(in: .whitespacesAndNewlines)
         self.testName = try? container.decode(String.self, forKey: .testName)
-        
-        self.manufacturer = try? container.decode(String.self, forKey: .manufacturer)
+        self.manufacturer = try? container.decode(String.self, forKey: .manufacturer).trimmingCharacters(in: .whitespacesAndNewlines)
         self.timestampSample = try container.decode(String.self, forKey: .timestampSample)
         guard timestampSample.isValidIso8601DateTime() else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
-        self.timestampResult = try? container.decode(String.self, forKey: .timestampResult )
+        self.timestampResult = try? container.decode(String.self, forKey: .timestampResult)
         if let timestampResult = timestampResult, !timestampResult.isValidIso8601DateTime() {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
-        self.result = try container.decode(String.self, forKey: .result)
-        let testCenter = try container.decode(String.self, forKey: .testCenter)
-        guard testCenter.count <= SCHEMA_LENGTH_LIMIT else {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
-        self.testCenter = testCenter
-        self.country = try container.decode(String.self, forKey: .country)
-        guard country.conformsTo(regex: "[A-Z]{1,10}") else {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
+        self.result = try container.decode(String.self, forKey: .result).trimmingCharacters(in: .whitespacesAndNewlines)
+        self.testCenter = try container.decode(String.self, forKey: .testCenter)
+        self.country = try container.decode(String.self, forKey: .country).trimmingCharacters(in: .whitespacesAndNewlines)
         self.certificateIssuer = try container.decode(String.self, forKey: .certificateIssuer)
-        guard certificateIssuer.count <= SCHEMA_LENGTH_LIMIT else {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
         self.certificateIdentifier = try container.decode(String.self, forKey: .certificateIdentifier)
-        guard certificateIdentifier.count <= SCHEMA_LENGTH_LIMIT else {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
     }
     
 }
@@ -236,16 +192,13 @@ public struct Recovery : Codable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.disease = try container.decode(String.self, forKey: .disease)
+        self.disease = try container.decode(String.self, forKey: .disease).trimmingCharacters(in: .whitespacesAndNewlines)
         let dateFirstPositiveTest = try container.decode(String.self, forKey: .dateFirstPositiveTest)
         guard dateFirstPositiveTest.isValidIso8601Date() else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.dateFirstPositiveTest = dateFirstPositiveTest
-        self.countryOfTest = try container.decode(String.self, forKey: .countryOfTest)
-        guard countryOfTest.conformsTo(regex: "[A-Z]{1,10}") else {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
+        self.countryOfTest = try container.decode(String.self, forKey: .countryOfTest).trimmingCharacters(in: .whitespacesAndNewlines)
         self.validFrom = try container.decode(String.self, forKey: .validFrom)
         guard validFrom.isValidIso8601Date() else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
@@ -255,12 +208,6 @@ public struct Recovery : Codable {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.certificateIssuer = try container.decode(String.self, forKey: .certificateIssuer)
-        guard certificateIssuer.count <= SCHEMA_LENGTH_LIMIT else {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
         self.certificateIdentifier = try container.decode(String.self, forKey: .certificateIdentifier)
-        guard certificateIdentifier.count <= SCHEMA_LENGTH_LIMIT else {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
     }
 }
