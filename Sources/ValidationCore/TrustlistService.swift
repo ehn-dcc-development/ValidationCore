@@ -21,11 +21,25 @@ class DefaultTrustlistService : TrustlistService {
     private let SIGNATURE_PATH = "sigv2"
     private let TRUSTLIST_FILENAME = "trustlist"
     private let TRUSTLIST_KEY_ALIAS = "trustlist_key"
+    private let LAST_UPDATE_KEY = "last_trustlist_update"
     private let dateService : DateService
     private var cachedTrustlist : TrustList
     private let fileStorage : FileStorage
     private let trustlistAnchor : String
-    
+    private let updateInterval = TimeInterval(1.hour)
+    private var lastUpdate : Date {
+        get {
+            if let isoDate = UserDefaults().string(forKey: LAST_UPDATE_KEY),
+               let date = ISO8601DateFormatter().date(from: isoDate) {
+                return date
+            }
+            return Date(timeIntervalSince1970: 0)
+        }
+        set {
+            let isoDate = ISO8601DateFormatter().string(from: newValue)
+            UserDefaults().set(isoDate, forKey: LAST_UPDATE_KEY)
+        }
+    }
     
     init(dateService: DateService, trustlistUrl: String, trustAnchor: String) {
         baseUrl = trustlistUrl
@@ -47,9 +61,16 @@ class DefaultTrustlistService : TrustlistService {
     }
     
     public func updateTrustlistIfNecessary(completionHandler: @escaping (ValidationError?)->()) {
+        if dateService.isNowBefore(lastUpdate.addingTimeInterval(updateInterval)) {
+            DDLogDebug("Skipping trustlist update...")
+            completionHandler(nil)
+            return
+        }
+        
         updateDetachedSignature() { result in
             switch result {
             case .success(let hash):
+                self.lastUpdate = self.dateService.now
                 if hash != self.cachedTrustlist.hash {
                     self.updateTrustlist(for: hash, completionHandler)
                     return
@@ -58,7 +79,7 @@ class DefaultTrustlistService : TrustlistService {
             case .failure(let error):
                 completionHandler(error)
             }
-       }
+        }
     }
     
     private func updateTrustlist(for hash: Data, _ completionHandler: @escaping (ValidationError?)->()) {
@@ -148,7 +169,7 @@ class DefaultTrustlistService : TrustlistService {
     
     private func refreshTrustlist(from data: Data, for hash: Data) -> Bool {
         guard let cbor = try? CBORDecoder(input: data.bytes).decodeItem(),
-            var trustlist = try? CodableCBORDecoder().decode(TrustList.self, from: cbor.asData()) else {
+              var trustlist = try? CodableCBORDecoder().decode(TrustList.self, from: cbor.asData()) else {
             return false
         }
         trustlist.hash = hash

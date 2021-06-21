@@ -34,6 +34,16 @@ extension Date {
     }
 }
 
+extension Int {
+    var hour : Int {
+        return self.minutes * 60
+    }
+    
+    var minutes : Int {
+        return self * 60
+    }
+}
+
 extension String {
     func isValidIso8601Date() -> Bool {
         let formatter = ISO8601DateFormatter()
