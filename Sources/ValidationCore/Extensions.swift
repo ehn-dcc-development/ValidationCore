@@ -61,7 +61,7 @@ extension String {
         return self.range(of: regex, options: .regularExpression) != nil
     }
     
-    func isMminimalVersion(major: Int, minor: Int) -> Bool {
+    func isMinimalVersion(major: Int, minor: Int) -> Bool {
         let version = self.split(separator: ".")
         guard version.count > 2,
               let majorVersion = Int(version[0]),
