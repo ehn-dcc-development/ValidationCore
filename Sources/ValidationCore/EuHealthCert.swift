@@ -47,8 +47,20 @@ public struct EuHealthCert : Codable {
         self.vaccinations = try? container.decode([Vaccination].self, forKey: .vaccinations)
         self.tests = try? container.decode([Test].self, forKey: .tests)
         self.recovery = try? container.decode([Recovery].self, forKey: .recovery)
+        
+        if (vaccinations.moreThanOne && (recovery.moreThanOne || tests.moreThanOne)) ||
+            tests.moreThanOne && (recovery.moreThanOne || vaccinations.moreThanOne) ||
+            recovery.moreThanOne && (tests.moreThanOne || vaccinations.moreThanOne) {
+            throw ValidationError.CBOR_DESERIALIZATION_FAILED
+        }
+        
+        if (version.isMinimalVersion(major: 1, minor: 3) && !(vaccinations.exactlyOne || recovery.exactlyOne || tests.exactlyOne)) {
+            throw ValidationError.CBOR_DESERIALIZATION_FAILED
+        }
     }
 }
+
+
 
 public struct Person : Codable {
     public let givenName: String?

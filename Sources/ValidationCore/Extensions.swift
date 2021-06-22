@@ -60,6 +60,16 @@ extension String {
     func conformsTo(regex: String) -> Bool {
         return self.range(of: regex, options: .regularExpression) != nil
     }
+    
+    func isMminimalVersion(major: Int, minor: Int) -> Bool {
+        let version = self.split(separator: ".")
+        guard version.count > 2,
+              let majorVersion = Int(version[0]),
+              let minorVersion = Int(version[1]) else {
+            return false
+        }
+        return majorVersion >= major && minorVersion >= minor
+    }
 }
 
 extension UInt64 {
@@ -74,3 +84,21 @@ extension UInt64 {
         return ISO8601DateFormatter().string(from: date)
     }
 }
+
+extension Optional where Wrapped : Collection {
+    var moreThanOne : Bool {
+        guard let this = self else {
+            return false
+        }
+        return this.count >= 1
+    }
+    
+    var exactlyOne : Bool {
+        guard let this = self else {
+            return false
+        }
+        return this.count == 1
+    }
+}
+
+
