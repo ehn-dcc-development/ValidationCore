@@ -16,9 +16,8 @@ public protocol TrustlistService {
 }
 
 class DefaultTrustlistService : TrustlistService {
-    private let baseUrl : String
-    private let TRUST_LIST_PATH = "listv2"
-    private let SIGNATURE_PATH = "sigv2"
+    private let trustlistUrl : String
+    private let signatureUrl : String
     private let TRUSTLIST_FILENAME = "trustlist"
     private let TRUSTLIST_KEY_ALIAS = "trustlist_key"
     private let LAST_UPDATE_KEY = "last_trustlist_update"
@@ -41,8 +40,9 @@ class DefaultTrustlistService : TrustlistService {
         }
     }
     
-    init(dateService: DateService, trustlistUrl: String, trustAnchor: String) {
-        baseUrl = trustlistUrl
+    init(dateService: DateService, trustlistUrl: String, signatureUrl: String, trustAnchor: String) {
+        self.trustlistUrl = trustlistUrl
+        self.signatureUrl = signatureUrl
         trustlistAnchor = trustAnchor
         self.fileStorage = FileStorage()
         cachedTrustlist = TrustList()
@@ -83,7 +83,7 @@ class DefaultTrustlistService : TrustlistService {
     }
     
     private func updateTrustlist(for hash: Data, _ completionHandler: @escaping (ValidationError?)->()) {
-        guard let request = self.defaultRequest(to: self.TRUST_LIST_PATH) else {
+        guard let request = self.defaultRequest(to: self.trustlistUrl) else {
             completionHandler(.TRUST_SERVICE_ERROR)
             return
         }
@@ -103,7 +103,7 @@ class DefaultTrustlistService : TrustlistService {
     }
     
     private func updateDetachedSignature(completionHandler: @escaping (Result<Data, ValidationError>)->()) {
-        guard let request = defaultRequest(to: SIGNATURE_PATH) else {
+        guard let request = defaultRequest(to: signatureUrl) else {
             completionHandler(.failure(.TRUST_SERVICE_ERROR))
             return
         }
@@ -129,8 +129,8 @@ class DefaultTrustlistService : TrustlistService {
         }.resume()
     }
     
-    private func defaultRequest(to path: String) -> URLRequest? {
-        guard let url = URL(string: "\(baseUrl)\(path)") else {
+    private func defaultRequest(to url: String) -> URLRequest? {
+        guard let url = URL(string: url) else {
             return nil
         }
         var request = URLRequest(url: url)
