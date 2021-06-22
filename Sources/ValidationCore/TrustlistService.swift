@@ -52,6 +52,12 @@ class DefaultTrustlistService : TrustlistService {
     }
     
     public func key(for keyId: Data, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>)->()){
+        if dateService.isNowBefore(lastUpdate.addingTimeInterval(updateInterval)) {
+            DDLogDebug("Skipping trustlist update...")
+            cachedKey(from: keyId, for: keyType, completionHandler)
+            return
+        }
+        
         updateTrustlistIfNecessary { error in
             if let error = error {
                 DDLogError("Cannot refresh trust list: \(error)")
@@ -61,12 +67,6 @@ class DefaultTrustlistService : TrustlistService {
     }
     
     public func updateTrustlistIfNecessary(completionHandler: @escaping (ValidationError?)->()) {
-        if dateService.isNowBefore(lastUpdate.addingTimeInterval(updateInterval)) {
-            DDLogDebug("Skipping trustlist update...")
-            completionHandler(nil)
-            return
-        }
-        
         updateDetachedSignature() { result in
             switch result {
             case .success(let hash):
