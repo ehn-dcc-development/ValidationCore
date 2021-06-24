@@ -50,11 +50,8 @@ public struct EuHealthCert : Codable {
         
         if (vaccinations.moreThanOne && (recovery.moreThanOne || tests.moreThanOne)) ||
             tests.moreThanOne && (recovery.moreThanOne || vaccinations.moreThanOne) ||
-            recovery.moreThanOne && (tests.moreThanOne || vaccinations.moreThanOne) {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
-        
-        if (version.isMinimalVersion(major: 1, minor: 3) && !(vaccinations.exactlyOne || recovery.exactlyOne || tests.exactlyOne)) {
+            recovery.moreThanOne && (tests.moreThanOne || vaccinations.moreThanOne) ||
+            !(vaccinations.exactlyOne || recovery.exactlyOne || tests.exactlyOne) {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
     }
@@ -141,7 +138,7 @@ public struct Test : Codable {
     public let timestampSample: String
     public let timestampResult : String?
     public let result: String
-    public let testCenter: String
+    public let testCenter: String?
     public let country: String
     public let certificateIssuer: String
     public let certificateIdentifier: String
