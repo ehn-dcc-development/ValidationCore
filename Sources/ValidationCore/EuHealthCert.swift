@@ -172,7 +172,7 @@ public struct Test : Codable {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.result = try container.decode(String.self, forKey: .result).trimmingCharacters(in: .whitespacesAndNewlines)
-        self.testCenter = try container.decode(String.self, forKey: .testCenter)
+        self.testCenter = try? container.decode(String.self, forKey: .testCenter)
         self.country = try container.decode(String.self, forKey: .country).trimmingCharacters(in: .whitespacesAndNewlines)
         self.certificateIssuer = try container.decode(String.self, forKey: .certificateIssuer)
         self.certificateIdentifier = try container.decode(String.self, forKey: .certificateIdentifier)
