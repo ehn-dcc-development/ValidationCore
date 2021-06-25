@@ -25,6 +25,9 @@ public enum ValidationError : String, Error, Codable {
     case KEY_CREATION_ERROR = "KEY_CREATION_ERROR"
     case KEYSTORE_ERROR = "KEYSTORE_ERROR"
     case SIGNATURE_INVALID = "SIGNATURE_INVALID"
+    case TRUST_LIST_SIGNATURE_INVALID = "TRUST_LIST_SIGNATURE_INVALID"
+    case TRUST_LIST_NOT_YET_VALID = "TRUST_LIST_NOT_YET_VALID"
+    case TRUST_LIST_EXPIRED = "TRUST_LIST_EXPIRED"
     
 
     public var message : String {
@@ -46,6 +49,9 @@ public enum ValidationError : String, Error, Codable {
         case .KEY_CREATION_ERROR: return "Cannot create key from data"
         case .SIGNATURE_INVALID: return "Signature is not valid"
         case .KEYSTORE_ERROR: return "Keystore error"
+        case .TRUST_LIST_SIGNATURE_INVALID: return "Trustlist signature is not valid"
+        case .TRUST_LIST_NOT_YET_VALID: return "Trustlist is not yet valid"
+        case .TRUST_LIST_EXPIRED: return "Trustlist is expired"
         }
     }
 }

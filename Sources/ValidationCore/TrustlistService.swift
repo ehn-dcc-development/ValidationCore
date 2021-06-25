@@ -116,15 +116,24 @@ class DefaultTrustlistService : TrustlistService {
             guard let cose = Cose(from: body),
                   let trustAnchorKey = self.trustAnchorKey(),
                   cose.hasValidSignature(for: trustAnchorKey) else {
-                completionHandler(.failure(.TRUST_SERVICE_ERROR))
+                completionHandler(.failure(.TRUST_LIST_SIGNATURE_INVALID))
                 return
             }
             guard let cwt = CWT(from: cose.payload),
-                  cwt.isValid(using: self.dateService),
                   let trustlistHash = cwt.sub else {
                 completionHandler(.failure(.TRUST_SERVICE_ERROR))
                 return
             }
+            guard cwt.isAlreadyValid(using: self.dateService) else {
+                completionHandler(.failure(.TRUST_LIST_NOT_YET_VALID))
+                return
+            }
+            
+            guard cwt.isNotExpired(using: self.dateService) else {
+                completionHandler(.failure(.TRUST_LIST_EXPIRED))
+                return
+            }
+            
             completionHandler(.success(trustlistHash))
         }.resume()
     }

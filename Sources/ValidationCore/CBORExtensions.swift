@@ -33,6 +33,10 @@ extension CBOR {
         return self.unwrap() as? UInt64
     }
     
+    func asDouble() -> Double? {
+        return self.unwrap() as? Double
+    }
+    
     func asInt64() -> Int64? {
         return self.unwrap() as? Int64
     }

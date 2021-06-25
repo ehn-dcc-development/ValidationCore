@@ -44,6 +44,12 @@ extension Int {
     }
 }
 
+extension Double {
+    func toUInt64() -> UInt64 {
+        return UInt64(self)
+    }
+}
+
 extension String {
     func isValidIso8601Date() -> Bool {
         let formatter = ISO8601DateFormatter()
