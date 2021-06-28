@@ -74,6 +74,20 @@ public struct TrustEntry : Codable {
         }
     }
     
+    public var notBefore : Date? {
+        guard let certificate = try? X509Certificate(data: cert) else {
+            return nil
+        }
+        return certificate.notBefore
+    }
+    
+    public var notAfter : Date? {
+        guard let certificate = try? X509Certificate(data: cert) else {
+            return nil
+        }
+        return certificate.notAfter
+    }
+    
     public func isValid(for dateService: DateService) -> Bool {
         guard let certificate = try? X509Certificate(data: cert) else {
             return false

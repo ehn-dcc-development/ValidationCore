@@ -8,7 +8,7 @@
 import Foundation
 import SwiftCBOR
 
-struct CWT {
+public struct CWT {
     let iss : String?
     let exp : UInt64?
     let iat : UInt64?
@@ -47,6 +47,25 @@ struct CWT {
         self.euHealthCert = euHealthCert
     }
     
+    var issuedAt : Date? {
+        get {
+            return iat?.toDate()
+        }
+    }
+    
+    var notBefore : Date? {
+        get {
+            return nbf?.toDate()
+        }
+    }
+    
+    var expiresAt : Date? {
+        get {
+            return exp?.toDate()
+        }
+    }
+    
+    
     func isValid(using dateService: DateService) -> Bool {
         guard let expDate = exp?.toDate() else {
             return false
@@ -78,5 +97,4 @@ struct CWT {
         }
         return dateService.isNowBefore(expDate)
     }
-    
 }

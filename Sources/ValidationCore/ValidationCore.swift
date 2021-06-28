@@ -87,7 +87,7 @@ public struct ValidationCore {
             return
         }
 
-        trustlistService.key(for: keyId, keyType: euHealthCert.type) { result in
+        trustlistService.key(for: keyId, cwt: cwt, keyType: euHealthCert.type) { result in
             switch result {
             case .success(let key):
                 let isSignatureValid = cose.hasValidSignature(for: key)

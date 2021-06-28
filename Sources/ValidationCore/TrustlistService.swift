@@ -12,6 +12,7 @@ import Security
 
 public protocol TrustlistService {
     func key(for keyId: Data, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>)->())
+    func key(for keyId: Data, cwt: CWT, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>)->())
     func updateTrustlistIfNecessary(completionHandler: @escaping (ValidationError?)->())
 }
 
@@ -52,18 +53,26 @@ class DefaultTrustlistService : TrustlistService {
     }
     
     public func key(for keyId: Data, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>)->()){
+        key(for: keyId, keyType: keyType, cwt: nil, completionHandler: completionHandler)
+    }
+    
+    public func key(for keyId: Data, cwt: CWT, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>)->()){
+        return key(for: keyId, keyType: keyType, cwt: cwt, completionHandler: completionHandler)
+    }
+    
+    private func key(for keyId: Data, keyType: CertType, cwt: CWT?, completionHandler: @escaping (Result<SecKey, ValidationError>)->()){
         if dateService.isNowBefore(lastUpdate.addingTimeInterval(updateInterval)) {
-            DDLogDebug("Skipping trustlist update...")
-            cachedKey(from: keyId, for: keyType, completionHandler)
-            return
-        }
-        
-        updateTrustlistIfNecessary { error in
-            if let error = error {
-                DDLogError("Cannot refresh trust list: \(error)")
-            }
-            self.cachedKey(from: keyId, for: keyType, completionHandler)
-        }
+                    DDLogDebug("Skipping trustlist update...")
+                    cachedKey(from: keyId, for: keyType, cwt: cwt, completionHandler)
+                    return
+                }
+                
+                updateTrustlistIfNecessary { error in
+                    if let error = error {
+                        DDLogError("Cannot refresh trust list: \(error)")
+                    }
+                    self.cachedKey(from: keyId, for: keyType, cwt: cwt, completionHandler)
+                }
     }
     
     public func updateTrustlistIfNecessary(completionHandler: @escaping (ValidationError?)->()) {
@@ -156,7 +165,7 @@ class DefaultTrustlistService : TrustlistService {
         return true
     }
     
-    private func cachedKey(from keyId: Data, for keyType: CertType, _ completionHandler: @escaping (Result<SecKey, ValidationError>)->()) {
+    private func cachedKey(from keyId: Data, for keyType: CertType, cwt: CWT?, _ completionHandler: @escaping (Result<SecKey, ValidationError>)->()) {
         guard let entry = cachedTrustlist.entry(for: keyId) else {
             completionHandler(.failure(.KEY_NOT_IN_TRUST_LIST))
             return
@@ -169,6 +178,17 @@ class DefaultTrustlistService : TrustlistService {
             completionHandler(.failure(.UNSUITABLE_PUBLIC_KEY_TYPE))
             return
         }
+        
+        if let cwtIssuedAt = cwt?.issuedAt,
+           let cwtExpiresAt = cwt?.expiresAt,
+           let certNotBefore = entry.notBefore,
+           let certNotAfter = entry.notAfter {
+            guard certNotBefore.isBefore(cwtIssuedAt) && certNotAfter.isAfter(cwtIssuedAt) && certNotAfter.isAfter(cwtExpiresAt) else {
+                completionHandler(.failure(.CWT_EXPIRED))
+                return
+            }
+        }
+        
         guard let secKey = entry.publicKey else {
             completionHandler(.failure(.KEY_CREATION_ERROR))
             return

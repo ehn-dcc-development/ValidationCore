@@ -48,6 +48,10 @@ public class X509TrustlistService : TrustlistService {
         completionHandler(.success(secKey))
     }
     
+    public func key(for keyId: Data, cwt: CWT, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>) -> ()) {
+        self.key(for: keyId, keyType: keyType, completionHandler: completionHandler)
+    }
+    
     public func updateTrustlistIfNecessary(completionHandler: @escaping (ValidationError?) -> ()) {
         /* not used */
     }
