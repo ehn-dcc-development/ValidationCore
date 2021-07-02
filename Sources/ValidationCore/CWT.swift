@@ -81,10 +81,13 @@ public struct CWT {
     }
     
     func isAlreadyValid(using dateService: DateService) -> Bool {
-        guard let iatDate = iat?.toDate() else {
+        guard nil != iat || nil != nbf else {
             return false
         }
-        var isValid = dateService.isNowAfter(iatDate)
+        var isValid = true
+        if let iatDate = iat?.toDate() {
+            isValid = isValid && dateService.isNowAfter(iatDate)
+        }
         if let nbfDate = nbf?.toDate() {
             isValid = isValid && dateService.isNowAfter(nbfDate)
         }
