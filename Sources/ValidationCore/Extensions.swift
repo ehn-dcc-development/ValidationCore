@@ -25,7 +25,7 @@ extension Data {
     }
 }
 
-extension Date {
+public extension Date {
     func isBefore(_ date: Date) -> Bool {
         return distance(to: date) > 0
     }
