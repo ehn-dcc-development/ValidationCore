@@ -14,7 +14,7 @@ let package = Package(
             targets: ["ValidationCore"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/ehn-digital-green-development/base45-swift", .branch("distribution/swiftpackage")),
+        .package(url: "https://github.com/ehn-digital-green-development/base45-swift", .branch("main")),
         .package(url: "https://github.com/CocoaLumberjack/CocoaLumberjack.git", .upToNextMajor(from: "3.7.0")),
         .package(name: "Gzip", url: "https://github.com/1024jp/GzipSwift", .upToNextMajor(from: "5.1.1")),
         .package(url: "https://github.com/eu-digital-green-certificates/SwiftCBOR", .branch("master")),
