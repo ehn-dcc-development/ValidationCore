@@ -48,51 +48,68 @@ public struct ValidationCore {
         scanner?.scan(qrView, self)
     }
     #endif
-    
-    /// Validate an Base45-encoded EHN health certificate
-    public func validate(encodedData: String, _ completionHandler: @escaping (ValidationResult) -> ()) {
+
+    func decodeCwtAndCose(encodedData: String) -> Result<(keyId: Data, cwt: CWT, cose: Cose), ValidationError> {
         DDLogInfo("Starting validation")
         guard let unprefixedEncodedString = removeScheme(prefix: PREFIX, from: encodedData) else {
-            completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .INVALID_SCHEME_PREFIX))
-            return
+            return .failure(.INVALID_SCHEME_PREFIX)
         }
-        
+
         guard let decodedData = decode(unprefixedEncodedString) else {
-            completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .BASE_45_DECODING_FAILED))
-            return
+            return .failure(.BASE_45_DECODING_FAILED)
         }
         DDLogDebug("Base45-decoded data: \(decodedData.humanReadable())")
-        
+
         guard let decompressedData = decompress(decodedData) else {
-            completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .DECOMPRESSION_FAILED))
-            return
+            return .failure(.DECOMPRESSION_FAILED)
         }
         DDLogDebug("Decompressed data: \(decompressedData.humanReadable())")
 
         guard let cose = cose(from: decompressedData),
               let keyId = cose.keyId else {
-            completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .COSE_DESERIALIZATION_FAILED))
-            return
+            return .failure(.COSE_DESERIALIZATION_FAILED)
         }
         DDLogDebug("KeyID: \(keyId.encode())")
-        
+
         guard let cwt = CWT(from: cose.payload),
-              let euHealthCert = cwt.euHealthCert else {
-            completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .CBOR_DESERIALIZATION_FAILED))
-            return
+              let _ = cwt.euHealthCert else {
+            return .failure(.CBOR_DESERIALIZATION_FAILED)
         }
-        
-        guard cwt.isValid(using: dateService) else {
-            completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: .CWT_EXPIRED))
+
+        return .success((keyId, cwt, cose))
+    }
+
+    public func decodeCwt(encodedData: String) -> Result<CWT, ValidationError> {
+        let cwtAndCose = decodeCwtAndCose(encodedData: encodedData)
+
+        switch cwtAndCose {
+            case .failure(let error): return .failure(error)
+            case .success(let result): return .success(result.cwt)
+        }
+    }
+    
+    /// Validate an Base45-encoded EHN health certificate
+    public func validate(encodedData: String, _ completionHandler: @escaping (ValidationResult) -> ()) {
+        let cwtResult = decodeCwtAndCose(encodedData: encodedData)
+
+        if case .failure(let error) = cwtResult {
+            completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: error))
             return
         }
 
-        trustlistService.key(for: keyId, cwt: cwt, keyType: euHealthCert.type) { result in
-            switch result {
-            case .success(let key):
-                let isSignatureValid = cose.hasValidSignature(for: key)
-                completionHandler(ValidationResult(isValid: isSignatureValid, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: isSignatureValid ? nil : .SIGNATURE_INVALID))
-            case .failure(let error): completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: error))
+        if case .success(let decodingResult) = cwtResult {
+            guard decodingResult.cwt.isValid(using: dateService) else {
+                completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: decodingResult.cwt), greenpass: decodingResult.cwt.euHealthCert!, error: .CWT_EXPIRED))
+                return
+            }
+
+            trustlistService.key(for: decodingResult.keyId, cwt: decodingResult.cwt, keyType: decodingResult.cwt.euHealthCert!.type) { result in
+                switch result {
+                case .success(let key):
+                    let isSignatureValid = decodingResult.cose.hasValidSignature(for: key)
+                    completionHandler(ValidationResult(isValid: isSignatureValid, metaInformation: MetaInfo(from: decodingResult.cwt), greenpass: decodingResult.cwt.euHealthCert!, error: isSignatureValid ? nil : .SIGNATURE_INVALID))
+                case .failure(let error): completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: decodingResult.cwt), greenpass: decodingResult.cwt.euHealthCert!, error: error))
+                }
             }
         }
     }
