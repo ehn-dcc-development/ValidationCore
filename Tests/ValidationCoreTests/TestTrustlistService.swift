@@ -22,6 +22,10 @@ class TestTrustlistService {
 }
 
 extension TestTrustlistService: TrustlistService {
+    func key(for keyId: Data, cwt: CWT, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>) -> ()) {
+        return key(for: keyId, keyType: keyType, completionHandler: completionHandler)
+    }
+
     func key(for keyId: Data, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>) -> ()) {
         guard let encodedCert = encodedCert,
               let cert = Data(base64Encoded: encodedCert) else {
