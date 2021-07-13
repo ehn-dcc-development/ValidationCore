@@ -21,6 +21,7 @@ class DefaultTrustlistService : TrustlistService {
     private let signatureUrl : String
     private let TRUSTLIST_FILENAME = "trustlist"
     private let TRUSTLIST_KEY_ALIAS = "trustlist_key"
+    private let TRUSTLIST_KEYCHAIN_ALIAS = "trustlist_keychain"
     private let LAST_UPDATE_KEY = "last_trustlist_update"
     private let dateService : DateService
     private var cachedTrustlist : TrustList
@@ -50,6 +51,7 @@ class DefaultTrustlistService : TrustlistService {
         self.dateService = dateService
         self.loadCachedTrustlist()
         updateTrustlistIfNecessary() { _ in }
+        removeiOS12LegacyTrustlist()
     }
     
     public func key(for keyId: Data, keyType: CertType, completionHandler: @escaping (Result<SecKey, ValidationError>)->()){
@@ -73,6 +75,13 @@ class DefaultTrustlistService : TrustlistService {
                     }
                     self.cachedKey(from: keyId, for: keyType, cwt: cwt, completionHandler)
                 }
+    }
+
+    private func removeiOS12LegacyTrustlist() {
+        let query = [kSecClass: kSecClassGenericPassword,
+                     kSecAttrLabel: self.TRUSTLIST_KEYCHAIN_ALIAS
+        ] as [String: Any]
+        SecItemDelete(query as CFDictionary)
     }
     
     public func updateTrustlistIfNecessary(completionHandler: @escaping (ValidationError?)->()) {
@@ -212,27 +221,75 @@ class DefaultTrustlistService : TrustlistService {
             DDLogError("Cannot encode trustlist for storing")
             return
         }
-        CryptoService.createKeyAndEncrypt(data: trustlistData, with: self.TRUSTLIST_KEY_ALIAS, completionHandler: { result in
-            switch result {
-            case .success(let data):
-                if !self.fileStorage.writeProtectedFileToDisk(fileData: data, with: self.TRUSTLIST_FILENAME) {
-                    DDLogError("Cannot write trustlist to disk")
+        if #available(iOS 13.0, *) {
+            CryptoService.createKeyAndEncrypt(data: trustlistData, with: self.TRUSTLIST_KEY_ALIAS, completionHandler: { result in
+                switch result {
+                case .success(let data):
+                    if !self.fileStorage.writeProtectedFileToDisk(fileData: data, with: self.TRUSTLIST_FILENAME) {
+                        DDLogError("Cannot write trustlist to disk")
+                    }
+                case .failure(let error): DDLogError(error)
                 }
-            case .failure(let error): DDLogError(error)
+            })
+        } else {
+            guard let accessFlags = SecAccessControlCreateWithFlags(
+                    kCFAllocatorDefault,
+                    kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+                    [],
+                    nil) else {
+                DDLogError(ValidationError.KEYSTORE_ERROR)
+                return
             }
-        })
+            let updateQuery = [kSecClass: kSecClassGenericPassword,
+                         kSecAttrLabel: self.TRUSTLIST_KEYCHAIN_ALIAS,
+                         kSecAttrAccessControl: accessFlags] as [String: Any]
+
+            let updateAttributes = [kSecValueData: trustlistData] as [String:Any]
+
+            let status = SecItemUpdate(updateQuery as CFDictionary, updateAttributes as CFDictionary)
+            if status == errSecItemNotFound {
+                let addQuery = [kSecClass: kSecClassGenericPassword,
+                             kSecAttrLabel: self.TRUSTLIST_KEYCHAIN_ALIAS,
+                             kSecAttrAccessControl: accessFlags,
+                             kSecValueData: trustlistData] as [String: Any]
+                let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+                if addStatus != errSecSuccess {
+                    DDLogError(ValidationError.KEYSTORE_ERROR)
+                }
+            } else if status != errSecSuccess {
+                DDLogError(ValidationError.KEYSTORE_ERROR)
+            }
+        }
     }
     
-    private func loadCachedTrustlist(){
-        if let trustlistData = fileStorage.loadProtectedFileFromDisk(with: TRUSTLIST_FILENAME) {
-            CryptoService.decrypt(ciphertext: trustlistData, with: TRUSTLIST_KEY_ALIAS) { result in
-                switch result {
-                case .success(let plaintext):
-                    if let trustlist = try? JSONDecoder().decode(TrustList.self, from: plaintext) {
-                        self.cachedTrustlist = trustlist
+    private func loadCachedTrustlist() {
+        if #available(iOS 13.0, *) {
+            if let trustlistData = fileStorage.loadProtectedFileFromDisk(with: TRUSTLIST_FILENAME) {
+                CryptoService.decrypt(ciphertext: trustlistData, with: TRUSTLIST_KEY_ALIAS) { result in
+                    switch result {
+                        case .success(let plaintext):
+                            if let trustlist = try? JSONDecoder().decode(TrustList.self, from: plaintext) {
+                                self.cachedTrustlist = trustlist
+                            }
+                        case .failure(let error): DDLogError("Cannot load cached trust list: \(error)")
                     }
-                case .failure(let error): DDLogError("Cannot load cached trust list: \(error)")
                 }
+            }
+        } else {
+            let query = [kSecClass: kSecClassGenericPassword,
+                         kSecAttrLabel: self.TRUSTLIST_KEYCHAIN_ALIAS,
+                         kSecReturnData: true] as [String: Any]
+
+            var item: CFTypeRef?
+            switch SecItemCopyMatching(query as CFDictionary, &item) {
+                case errSecSuccess:
+                    if let plaintext = item as? Data {
+                        if let trustlist = try? JSONDecoder().decode(TrustList.self, from: plaintext) {
+                            self.cachedTrustlist = trustlist
+                        }
+                    }
+
+                default: DDLogError(ValidationError.KEYSTORE_ERROR)
             }
         }
     }
