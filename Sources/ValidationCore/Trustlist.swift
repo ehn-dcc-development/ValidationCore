@@ -9,7 +9,7 @@ import Foundation
 import SwiftCBOR
 import ASN1Decoder
 
-struct TrustList : Codable {
+struct TrustList : SignedData, Codable {
     let entries : [TrustEntry]
     var hash: Data?
     
@@ -24,6 +24,10 @@ struct TrustList : Codable {
     
     func entry(for keyId: Data) -> TrustEntry? {
         return entries.first(where: { entry in entry.keyId == keyId})
+    }
+
+    var isEmpty: Bool {
+        return entries.isEmpty
     }
 }
 

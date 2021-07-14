@@ -98,7 +98,7 @@ public struct ValidationCore {
     }
 
     public func updateTrustlist(completionHandler: @escaping (ValidationError?)->()) {
-        trustlistService.updateTrustlistIfNecessary(completionHandler: completionHandler)
+        trustlistService.updateDataIfNecessary(completionHandler: completionHandler)
     }
 
     //MARK: - Helper Functions
