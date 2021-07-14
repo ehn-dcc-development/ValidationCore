@@ -22,6 +22,7 @@ let package = Package(
         .package(url: "https://github.com/Quick/Nimble.git", .upToNextMajor(from: "9.0.0")),
         .package(url: "https://github.com/Quick/Quick", .upToNextMajor(from: "3.1.2")),
         .package(url: "https://github.com/AliSoftware/OHHTTPStubs", .upToNextMajor(from: "9.1.0")),
+        .package(name: "CertLogic", url: "https://github.com/eu-digital-green-certificates/dgc-certlogic-ios.git", .branch("main")),
     ],
     targets: [
         .target(
@@ -30,7 +31,8 @@ let package = Package(
                            .product(name: "CocoaLumberjackSwift", package: "CocoaLumberjack"),
                            "ASN1Decoder",
                            "Gzip",
-                           "SwiftCBOR"
+                           "SwiftCBOR",
+                           "CertLogic"
             ]),
         .testTarget(
             name: "ValidationCoreTests",
