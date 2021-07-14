@@ -35,6 +35,18 @@ public struct ValidationCore {
     EkhRcgdlVfUb
     """.replacingOccurrences(of: "\n", with: "")
 
+    private static let DEFAULT_VALUE_SETS_URL = "https://dgc.a-sit.at/ehn/values/v1/bin"
+    private static let DEFAULT_VALUE_SETS_SIGNATURE_URL = "https://dgc.a-sit.at/ehn/values/v1/sig"
+    private static let DEFAULT_VALUE_SETS_TRUSTANCHOR = """
+    MIIBJTCBy6ADAgECAgUAwvEVkzAKBggqhkjOPQQDAjAQMQ4wDAYDVQQDDAVFQy1N
+    ZTAeFw0yMTA0MjMxMTI3NDhaFw0yMTA1MjMxMTI3NDhaMBAxDjAMBgNVBAMMBUVD
+    LU1lMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/OV5UfYrtE140ztF9jOgnux1
+    oyNO8Bss4377E/kDhp9EzFZdsgaztfT+wvA29b7rSb2EsHJrr8aQdn3/1ynte6MS
+    MBAwDgYDVR0PAQH/BAQDAgWgMAoGCCqGSM49BAMCA0kAMEYCIQC51XwstjIBH10S
+    N701EnxWGK3gIgPaUgBN+ljZAs76zQIhAODq4TJ2qAPpFc1FIUOvvlycGJ6QVxNX
+    EkhRcgdlVfUb
+    """.replacingOccurrences(of: "\n", with: "")
+
     private let PREFIX = "HC1:"
 
     private var completionHandler : ((ValidationResult) -> ())?
@@ -43,6 +55,7 @@ public struct ValidationCore {
     #endif
     private let trustlistService : TrustlistService
     private let businessRulesService : BusinessRulesService
+    private let valueSetsService : ValueSetsService
     private let dateService : DateService
 
     public init(trustlistService: TrustlistService? = nil,
@@ -53,7 +66,11 @@ public struct ValidationCore {
                 businessRulesService: BusinessRulesService? = nil,
                 businessRulesUrl: String? = nil,
                 businessRulesSignatureUrl: String? = nil,
-                businessRulesTrustAnchor: String? = nil
+                businessRulesTrustAnchor: String? = nil,
+                valueSetsService: ValueSetsService? = nil,
+                valueSetsUrl: String? = nil,
+                valueSetsSignatureUrl: String? = nil,
+                valueSetsTrustAnchor: String? = nil
     ) {
         let dateService = dateService ?? DefaultDateService()
         self.dateService = dateService
@@ -61,6 +78,8 @@ public struct ValidationCore {
 
         self.businessRulesService = businessRulesService ?? DefaultBusinessRulesService(dateService: dateService, businessRulesUrl: businessRulesUrl ?? ValidationCore.DEFAULT_BUSINESSRULES_URL, signatureUrl: businessRulesSignatureUrl ?? ValidationCore.DEFAULT_BUSINESSRULES_SIGNATURE_URL, trustAnchor: businessRulesTrustAnchor ?? ValidationCore.DEFAULT_BUSINESSRULES_TRUSTANCHOR)
 
+        self.valueSetsService = valueSetsService ?? DefaultValueSetsService(dateService: dateService, valueSetsUrl: valueSetsUrl ?? ValidationCore.DEFAULT_VALUE_SETS_URL, signatureUrl: valueSetsSignatureUrl ?? ValidationCore.DEFAULT_VALUE_SETS_SIGNATURE_URL, trustAnchor: valueSetsTrustAnchor ?? ValidationCore.DEFAULT_VALUE_SETS_TRUSTANCHOR)
+        
         DDLog.add(DDOSLogger.sharedInstance)
    }
 
