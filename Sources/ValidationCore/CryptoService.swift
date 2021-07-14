@@ -11,6 +11,7 @@ import LocalAuthentication
 import Security
 import CocoaLumberjackSwift
 
+@available(iOS 13.0, *)
 public struct CryptoService {
     
     public static func generateSymmetricKey(for alias: String, completionHandler : @escaping (ValidationError?)->()) throws {
@@ -133,6 +134,7 @@ protocol GenericPasswordConvertible: CustomStringConvertible {
     var rawRepresentation: Data { get }
 }
 
+@available(iOS 13.0, *)
 extension SymmetricKey: GenericPasswordConvertible {
     public var description: String {
         return "SymmetricKey"

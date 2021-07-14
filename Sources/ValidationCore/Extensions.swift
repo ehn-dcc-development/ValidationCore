@@ -27,10 +27,18 @@ extension Data {
 
 public extension Date {
     func isBefore(_ date: Date) -> Bool {
-        return distance(to: date) > 0
+        if #available(iOS 13.0, *) {
+            return distance(to: date) > 0
+        } else {
+            return self < date
+        }
     }
     func isAfter(_ date: Date) -> Bool {
-        return distance(to: date) < 0
+        if #available(iOS 13.0, *) {
+            return distance(to: date) < 0
+        } else {
+            return self > date
+        }
     }
 }
 
