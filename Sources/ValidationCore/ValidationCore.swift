@@ -143,7 +143,7 @@ public struct ValidationCore {
         }
     }
 
-    public func validateBusinessRules(forCertificate certificate: EuHealthCert, issuedAt: Date, expiresAt: Date, countryCode: String, completionHandler: @escaping ([CertLogic.ValidationResult]) -> ()) {
+    public func validateBusinessRules(forCertificate certificate: EuHealthCert, validationClock: Date, issuedAt: Date, expiresAt: Date, countryCode: String, completionHandler: @escaping ([CertLogic.ValidationResult]) -> ()) {
         self.businessRulesService.businessRules { result in
             switch result {
             case .success(let rules):
@@ -153,11 +153,11 @@ public struct ValidationCore {
                         let certLogicValueSets = valueSets.mapValues({ $0.valueSetValues.map({ $0.key})})
 
                         let engine = CertLogicEngine(schema: euDgcSchemaV1, rules: rules)
-                        let filter = FilterParameter(validationClock: Date(), countryCode: countryCode, certificationType: certificate.certificationType)
+                        let filter = FilterParameter(validationClock: validationClock, countryCode: countryCode, certificationType: certificate.certificationType)
                         let certificatePayload = try! JSONEncoder().encode(certificate)
                         let payloadString = String(data: certificatePayload, encoding: .utf8)!
 
-                        let result = engine.validate(filter: filter, external: ExternalParameter(validationClock: Date(), valueSets: certLogicValueSets, exp: expiresAt, iat: issuedAt, issuerCountryCode: countryCode), payload: payloadString)
+                        let result = engine.validate(filter: filter, external: ExternalParameter(validationClock: validationClock, valueSets: certLogicValueSets, exp: expiresAt, iat: issuedAt, issuerCountryCode: countryCode), payload: payloadString)
 
                         if result.count == 0 {
                             completionHandler([CertLogic.ValidationResult(rule: nil, result: .passed, validationErrors: nil)])
