@@ -14,7 +14,7 @@ public struct CWT {
     let iat : UInt64?
     let nbf : UInt64?
     let sub : Data?
-    let euHealthCert : EuHealthCert?
+    public let euHealthCert : EuHealthCert?
     
     enum PayloadKeys : Int {
         case iss = 1
@@ -47,19 +47,19 @@ public struct CWT {
         self.euHealthCert = euHealthCert
     }
     
-    var issuedAt : Date? {
+    public var issuedAt : Date? {
         get {
             return iat?.toDate()
         }
     }
     
-    var notBefore : Date? {
+    public var notBefore : Date? {
         get {
             return nbf?.toDate()
         }
     }
     
-    var expiresAt : Date? {
+    public var expiresAt : Date? {
         get {
             return exp?.toDate()
         }

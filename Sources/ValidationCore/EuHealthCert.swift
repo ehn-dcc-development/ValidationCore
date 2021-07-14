@@ -17,7 +17,7 @@ public struct EuHealthCert : Codable {
     public let recovery: [Recovery]?
     public let tests: [Test]?
     
-    var type : CertType {
+    public var type : CertType {
         get {
             switch self {
             case _ where nil != vaccinations && vaccinations?.count ?? 0 > 0:
