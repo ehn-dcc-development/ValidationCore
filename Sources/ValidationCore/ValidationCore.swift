@@ -6,6 +6,7 @@ import UIKit
 #else
 import Foundation
 #endif
+import CertLogic
 
 /// Electronic Health Certificate Validation Core
 ///
@@ -79,7 +80,7 @@ public struct ValidationCore {
         self.businessRulesService = businessRulesService ?? DefaultBusinessRulesService(dateService: dateService, businessRulesUrl: businessRulesUrl ?? ValidationCore.DEFAULT_BUSINESSRULES_URL, signatureUrl: businessRulesSignatureUrl ?? ValidationCore.DEFAULT_BUSINESSRULES_SIGNATURE_URL, trustAnchor: businessRulesTrustAnchor ?? ValidationCore.DEFAULT_BUSINESSRULES_TRUSTANCHOR)
 
         self.valueSetsService = valueSetsService ?? DefaultValueSetsService(dateService: dateService, valueSetsUrl: valueSetsUrl ?? ValidationCore.DEFAULT_VALUE_SETS_URL, signatureUrl: valueSetsSignatureUrl ?? ValidationCore.DEFAULT_VALUE_SETS_SIGNATURE_URL, trustAnchor: valueSetsTrustAnchor ?? ValidationCore.DEFAULT_VALUE_SETS_TRUSTANCHOR)
-        
+
         DDLog.add(DDOSLogger.sharedInstance)
    }
 
@@ -138,6 +139,38 @@ public struct ValidationCore {
                 let isSignatureValid = cose.hasValidSignature(for: key)
                 completionHandler(ValidationResult(isValid: isSignatureValid, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: isSignatureValid ? nil : .SIGNATURE_INVALID))
             case .failure(let error): completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: error))
+            }
+        }
+    }
+
+    public func validateBusinessRules(forCertificate certificate: EuHealthCert, issuedAt: Date, expiresAt: Date, countryCode: String, completionHandler: @escaping ([CertLogic.ValidationResult]) -> ()) {
+        self.businessRulesService.businessRules { result in
+            switch result {
+            case .success(let rules):
+                self.valueSetsService.valueSets { valueSetResult in
+                    switch valueSetResult {
+                    case .success(let valueSets):
+                        let certLogicValueSets = valueSets.mapValues({ $0.valueSetValues.map({ $0.key})})
+
+                        let engine = CertLogicEngine(schema: euDgcSchemaV1, rules: rules)
+                        let filter = FilterParameter(validationClock: Date(), countryCode: countryCode, certificationType: certificate.certificationType)
+                        let certificatePayload = try! JSONEncoder().encode(certificate)
+                        let payloadString = String(data: certificatePayload, encoding: .utf8)!
+
+                        let result = engine.validate(filter: filter, external: ExternalParameter(validationClock: Date(), valueSets: certLogicValueSets, exp: expiresAt, iat: issuedAt, issuerCountryCode: countryCode), payload: payloadString)
+
+                        if result.count == 0 {
+                            completionHandler([CertLogic.ValidationResult(rule: nil, result: .passed, validationErrors: nil)])
+                        } else {
+                            completionHandler(result)
+                        }
+                    case .failure(_):
+                        completionHandler([CertLogic.ValidationResult(rule: nil, result: .fail, validationErrors: nil)])
+                    }
+                }
+            case .failure(_):
+                completionHandler([CertLogic.ValidationResult(rule: nil, result: .fail, validationErrors: nil)])
+                break
             }
         }
     }
