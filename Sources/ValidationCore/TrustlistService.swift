@@ -62,17 +62,17 @@ class DefaultTrustlistService : TrustlistService {
     
     private func key(for keyId: Data, keyType: CertType, cwt: CWT?, completionHandler: @escaping (Result<SecKey, ValidationError>)->()){
         if dateService.isNowBefore(lastUpdate.addingTimeInterval(updateInterval)) {
-                    DDLogDebug("Skipping trustlist update...")
-                    cachedKey(from: keyId, for: keyType, cwt: cwt, completionHandler)
-                    return
-                }
-                
-                updateTrustlistIfNecessary { error in
-                    if let error = error {
-                        DDLogError("Cannot refresh trust list: \(error)")
-                    }
-                    self.cachedKey(from: keyId, for: keyType, cwt: cwt, completionHandler)
-                }
+            DDLogDebug("Skipping trustlist update...")
+            cachedKey(from: keyId, for: keyType, cwt: cwt, completionHandler)
+            return
+        }
+        
+        updateTrustlistIfNecessary { error in
+            if let error = error {
+                DDLogError("Cannot refresh trust list: \(error)")
+            }
+            self.cachedKey(from: keyId, for: keyType, cwt: cwt, completionHandler)
+        }
     }
     
     public func updateTrustlistIfNecessary(completionHandler: @escaping (ValidationError?)->()) {
@@ -122,29 +122,15 @@ class DefaultTrustlistService : TrustlistService {
                 completionHandler(.failure(.TRUST_SERVICE_ERROR))
                 return
             }
-            guard let cose = Cose(from: body),
-                  let trustAnchorKey = self.trustAnchorKey(),
-                  cose.hasValidSignature(for: trustAnchorKey) else {
-                completionHandler(.failure(.TRUST_LIST_SIGNATURE_INVALID))
+            do {
+                let decoded = try DataDecoder().decode(signatureCose: body, trustAnchor: self.trustlistAnchor, dateService: self.dateService)
+                let trustlistHash = decoded.content
+                completionHandler(.success(trustlistHash))
+            } catch let error {
+                completionHandler(.failure(error as? ValidationError ?? .TRUST_SERVICE_ERROR))
                 return
             }
-            guard let cwt = CWT(from: cose.payload),
-                  let trustlistHash = cwt.sub else {
-                completionHandler(.failure(.TRUST_SERVICE_ERROR))
-                return
-            }
-            guard cwt.isAlreadyValid(using: self.dateService) else {
-                completionHandler(.failure(.TRUST_LIST_NOT_YET_VALID))
-                return
-            }
-            
-            guard cwt.isNotExpired(using: self.dateService) else {
-                completionHandler(.failure(.TRUST_LIST_EXPIRED))
-                return
-            }
-            
-            completionHandler(.success(trustlistHash))
-        }.resume()
+       }.resume()
     }
     
     private func defaultRequest(to url: String) -> URLRequest? {
@@ -235,14 +221,5 @@ class DefaultTrustlistService : TrustlistService {
                 }
             }
         }
-    }
-    
-    private func trustAnchorKey() -> SecKey? {
-        guard let certData = Data(base64Encoded: trustlistAnchor),
-              let certificate = SecCertificateCreateWithData(nil, certData as CFData),
-              let secKey = SecCertificateCopyKey(certificate) else {
-            return nil
-        }
-        return secKey
     }
 }

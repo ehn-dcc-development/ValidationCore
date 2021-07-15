@@ -144,7 +144,7 @@ struct Cose {
         fileprivate let rawHeader : CBOR?
         let keyId : [UInt8]?
         let algorithm : Algorithm?
-        
+
         enum Headers : Int {
             case keyId = 4
             case algorithm = 1
