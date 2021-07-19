@@ -97,8 +97,19 @@ public struct ValidationCore {
         }
     }
 
+    /// Manually trigger an update for the used trustlist
     public func updateTrustlist(completionHandler: @escaping (ValidationError?)->()) {
         trustlistService.updateTrustlistIfNecessary(completionHandler: completionHandler)
+    }
+    
+    /// Decodes business rules and validates the detached signature
+    public func decode(businessRules: Data, signature: Data, trustAnchor: String) throws ->  (SignatureInfo, BusinessRulesContainer) {
+        return try DataDecoder().decode(businessRules: businessRules, signature: signature, trustAnchor: trustAnchor, dateService: self.dateService)
+    }
+    
+    /// Decodes value sets and validates the detached signature
+    public func decode(valueSet: Data, signature: Data, trustAnchor: String) throws -> (SignatureInfo, ValueSetContainer) {
+        return try DataDecoder().decode(valueSets: valueSet, signature: signature, trustAnchor: trustAnchor, dateService: self.dateService)
     }
 
     //MARK: - Helper Functions
