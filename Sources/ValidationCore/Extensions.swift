@@ -84,6 +84,15 @@ extension String {
         }
         return majorVersion >= major && minorVersion >= minor
     }
+    
+    func normalizeCertificate() -> String {
+        return self.replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: "CERTIFICATE", with: "")
+            .replacingOccurrences(of: "BEGIN", with: "")
+            .replacingOccurrences(of: "END", with: "")
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "\n", with: "")
+    }
 }
 
 extension UInt64 {

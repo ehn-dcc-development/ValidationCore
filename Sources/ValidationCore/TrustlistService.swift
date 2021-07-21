@@ -45,7 +45,7 @@ class DefaultTrustlistService : TrustlistService {
     init(dateService: DateService, trustlistUrl: String, signatureUrl: String, trustAnchor: String) {
         self.trustlistUrl = trustlistUrl
         self.signatureUrl = signatureUrl
-        trustlistAnchor = trustAnchor
+        trustlistAnchor = trustAnchor.normalizeCertificate()
         self.fileStorage = FileStorage()
         cachedTrustlist = TrustList()
         self.dateService = dateService

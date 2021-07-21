@@ -12,7 +12,7 @@ struct DataDecoder {
     
     func decode(signatureCose: Data, trustAnchor: String, dateService: DateService) throws -> SignatureInfo {
         guard let cose = Cose(from: signatureCose),
-              let trustAnchorKey = key(from: trustAnchor),
+              let trustAnchorKey = key(from: trustAnchor.normalizeCertificate()),
               cose.hasValidSignature(for: trustAnchorKey) else {
             throw ValidationError.TRUST_LIST_SIGNATURE_INVALID
         }
