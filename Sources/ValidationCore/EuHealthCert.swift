@@ -168,9 +168,6 @@ public struct Test : Codable {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.timestampResult = try? container.decode(String.self, forKey: .timestampResult)
-        if let timestampResult = timestampResult, !timestampResult.isValidIso8601DateTime() {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
         self.result = try container.decode(String.self, forKey: .result).trimmingCharacters(in: .whitespacesAndNewlines)
         self.testCenter = try? container.decode(String.self, forKey: .testCenter)
         self.country = try container.decode(String.self, forKey: .country).trimmingCharacters(in: .whitespacesAndNewlines)
