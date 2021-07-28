@@ -128,6 +128,7 @@ public struct Vaccination : Codable {
         }
         guard 1..<10 ~= totalDoses else {
              throw ValidationError.CBOR_DESERIALIZATION_FAILED
+        }
         self.vaccinationDate = try container.decode(String.self, forKey: .vaccinationDate)
         guard vaccinationDate.isValidIso8601Date() else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
