@@ -126,6 +126,8 @@ public struct Vaccination : Codable {
         } catch DecodingError.typeMismatch {
             self.totalDoses = try UInt64(container.decode(Double.self, forKey: .totalDoses))
         }
+        guard 1..<10 ~= totalDoses else {
+             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         self.vaccinationDate = try container.decode(String.self, forKey: .vaccinationDate)
         guard vaccinationDate.isValidIso8601Date() else {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
