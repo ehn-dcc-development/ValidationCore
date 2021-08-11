@@ -82,16 +82,20 @@ public struct ValidationCore {
             return
         }
         
-        guard cwt.isValid(using: dateService) else {
-            completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: .CWT_EXPIRED))
-            return
-        }
-
         trustlistService.key(for: keyId, cwt: cwt, keyType: euHealthCert.type) { result in
             switch result {
             case .success(let key):
-                let isSignatureValid = cose.hasValidSignature(for: key)
-                completionHandler(ValidationResult(isValid: isSignatureValid, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: isSignatureValid ? nil : .SIGNATURE_INVALID))
+                guard cose.hasValidSignature(for: key) else {
+                    completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: .SIGNATURE_INVALID))
+                    return
+                }
+                
+                guard cwt.isValid(using: dateService) else {
+                    completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: .CWT_EXPIRED))
+                    return
+                }
+
+                completionHandler(ValidationResult(isValid: true, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: .SIGNATURE_INVALID))
             case .failure(let error): completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: error))
             }
         }
