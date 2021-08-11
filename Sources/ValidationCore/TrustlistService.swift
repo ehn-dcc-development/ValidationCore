@@ -17,12 +17,13 @@ public protocol TrustlistService {
 }
 
 class DefaultTrustlistService : TrustlistService {
-    private let trustlistUrl : String
-    private let signatureUrl : String
     private let TRUSTLIST_FILENAME = "trustlist"
     private let TRUSTLIST_KEY_ALIAS = "trustlist_key"
     private let TRUSTLIST_KEYCHAIN_ALIAS = "trustlist_keychain"
     private let LAST_UPDATE_KEY = "last_trustlist_update"
+    private let trustlistUrl : String
+    private let signatureUrl : String
+    private let apiKey : String?
     private let dateService : DateService
     private var cachedTrustlist : TrustList
     private let fileStorage : FileStorage
@@ -42,10 +43,11 @@ class DefaultTrustlistService : TrustlistService {
         }
     }
     
-    init(dateService: DateService, trustlistUrl: String, signatureUrl: String, trustAnchor: String) {
+    init(dateService: DateService, trustlistUrl: String, signatureUrl: String, trustAnchor: String, apiKey: String?) {
         self.trustlistUrl = trustlistUrl
         self.signatureUrl = signatureUrl
         trustlistAnchor = trustAnchor.normalizeCertificate()
+        self.apiKey = apiKey
         self.fileStorage = FileStorage()
         cachedTrustlist = TrustList()
         self.dateService = dateService
@@ -148,6 +150,9 @@ class DefaultTrustlistService : TrustlistService {
         }
         var request = URLRequest(url: url)
         request.addValue("application/octet-stream", forHTTPHeaderField: "Accept")
+        if let apiKey = self.apiKey {
+            request.addValue(apiKey, forHTTPHeaderField: "X-Token")
+        }
         return request
     }
     

@@ -31,10 +31,10 @@ public struct ValidationCore {
     private let trustlistService : TrustlistService
     private let dateService : DateService
 
-    public init(trustlistService: TrustlistService? = nil, dateService: DateService? = nil, trustlistUrl: String? = nil, signatureUrl: String? = nil, trustAnchor : String? = nil){
+    public init(trustlistService: TrustlistService? = nil, dateService: DateService? = nil, trustlistUrl: String? = nil, signatureUrl: String? = nil, trustAnchor : String? = nil, apiKey : String? = nil){
         let dateService = dateService ?? DefaultDateService()
         self.dateService = dateService
-        self.trustlistService = trustlistService ?? DefaultTrustlistService(dateService: dateService, trustlistUrl: trustlistUrl ?? ValidationCore.DEFAULT_TRUSTLIST_URL, signatureUrl: signatureUrl ?? ValidationCore.DEFAULT_SIGNATURE_URL, trustAnchor: trustAnchor ?? ValidationCore.DEFAULT_TRUSTANCHOR)
+        self.trustlistService = trustlistService ?? DefaultTrustlistService(dateService: dateService, trustlistUrl: trustlistUrl ?? ValidationCore.DEFAULT_TRUSTLIST_URL, signatureUrl: signatureUrl ?? ValidationCore.DEFAULT_SIGNATURE_URL, trustAnchor: trustAnchor ?? ValidationCore.DEFAULT_TRUSTANCHOR, apiKey: apiKey)
         DDLog.add(DDOSLogger.sharedInstance)
    }
 
