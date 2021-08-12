@@ -95,7 +95,7 @@ public struct ValidationCore {
                     return
                 }
 
-                completionHandler(ValidationResult(isValid: true, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: .SIGNATURE_INVALID))
+                completionHandler(ValidationResult(isValid: true, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: nil))
             case .failure(let error): completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: cwt), greenpass: euHealthCert, error: error))
             }
         }
