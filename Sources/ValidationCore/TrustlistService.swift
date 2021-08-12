@@ -78,7 +78,7 @@ class DefaultTrustlistService : TrustlistService {
             self.cachedKey(from: keyId, for: keyType, cwt: cwt, completionHandler)
         }
     }
-
+    
     private func removeiOS12LegacyTrustlist() {
         let query = [kSecClass: kSecClassGenericPassword,
                      kSecAttrLabel: self.TRUSTLIST_KEYCHAIN_ALIAS
@@ -141,7 +141,7 @@ class DefaultTrustlistService : TrustlistService {
                 completionHandler(.failure(error as? ValidationError ?? .TRUST_SERVICE_ERROR))
                 return
             }
-       }.resume()
+        }.resume()
     }
     
     private func defaultRequest(to url: String) -> URLRequest? {
@@ -183,8 +183,24 @@ class DefaultTrustlistService : TrustlistService {
            let cwtExpiresAt = cwt?.expiresAt,
            let certNotBefore = entry.notBefore,
            let certNotAfter = entry.notAfter {
-            guard certNotBefore.isBefore(cwtIssuedAt) && certNotAfter.isAfter(cwtIssuedAt) && certNotAfter.isAfter(cwtExpiresAt) else {
+            
+            guard certNotAfter.isAfter(dateService.now) else {
+                completionHandler(.failure(.PUBLIC_KEY_EXPIRED))
+                return
+            }
+            
+            guard certNotBefore.isBefore(dateService.now) else {
+                completionHandler(.failure(.PUBLIC_KEY_NOT_YET_VALID))
+                return
+            }
+            
+            guard cwtExpiresAt.isAfter(dateService.now) else {
                 completionHandler(.failure(.CWT_EXPIRED))
+                return
+            }
+            
+            guard cwtIssuedAt.isBefore(dateService.now) else {
+                completionHandler(.failure(.CWT_NOT_YET_VALID))
                 return
             }
         }
@@ -232,17 +248,17 @@ class DefaultTrustlistService : TrustlistService {
                 return
             }
             let updateQuery = [kSecClass: kSecClassGenericPassword,
-                         kSecAttrLabel: self.TRUSTLIST_KEYCHAIN_ALIAS,
-                         kSecAttrAccessControl: accessFlags] as [String: Any]
-
+                               kSecAttrLabel: self.TRUSTLIST_KEYCHAIN_ALIAS,
+                               kSecAttrAccessControl: accessFlags] as [String: Any]
+            
             let updateAttributes = [kSecValueData: trustlistData] as [String:Any]
-
+            
             let status = SecItemUpdate(updateQuery as CFDictionary, updateAttributes as CFDictionary)
             if status == errSecItemNotFound {
                 let addQuery = [kSecClass: kSecClassGenericPassword,
-                             kSecAttrLabel: self.TRUSTLIST_KEYCHAIN_ALIAS,
-                             kSecAttrAccessControl: accessFlags,
-                             kSecValueData: trustlistData] as [String: Any]
+                                kSecAttrLabel: self.TRUSTLIST_KEYCHAIN_ALIAS,
+                                kSecAttrAccessControl: accessFlags,
+                                kSecValueData: trustlistData] as [String: Any]
                 let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
                 if addStatus != errSecSuccess {
                     DDLogError(ValidationError.KEYSTORE_ERROR)
@@ -258,11 +274,11 @@ class DefaultTrustlistService : TrustlistService {
             if let trustlistData = fileStorage.loadProtectedFileFromDisk(with: TRUSTLIST_FILENAME) {
                 CryptoService.decrypt(ciphertext: trustlistData, with: TRUSTLIST_KEY_ALIAS) { result in
                     switch result {
-                        case .success(let plaintext):
-                            if let trustlist = try? JSONDecoder().decode(TrustList.self, from: plaintext) {
-                                self.cachedTrustlist = trustlist
-                            }
-                        case .failure(let error): DDLogError("Cannot load cached trust list: \(error)")
+                    case .success(let plaintext):
+                        if let trustlist = try? JSONDecoder().decode(TrustList.self, from: plaintext) {
+                            self.cachedTrustlist = trustlist
+                        }
+                    case .failure(let error): DDLogError("Cannot load cached trust list: \(error)")
                     }
                 }
             }
@@ -270,17 +286,17 @@ class DefaultTrustlistService : TrustlistService {
             let query = [kSecClass: kSecClassGenericPassword,
                          kSecAttrLabel: self.TRUSTLIST_KEYCHAIN_ALIAS,
                          kSecReturnData: true] as [String: Any]
-
+            
             var item: CFTypeRef?
             switch SecItemCopyMatching(query as CFDictionary, &item) {
-                case errSecSuccess:
-                    if let plaintext = item as? Data {
-                        if let trustlist = try? JSONDecoder().decode(TrustList.self, from: plaintext) {
-                            self.cachedTrustlist = trustlist
-                        }
+            case errSecSuccess:
+                if let plaintext = item as? Data {
+                    if let trustlist = try? JSONDecoder().decode(TrustList.self, from: plaintext) {
+                        self.cachedTrustlist = trustlist
                     }
-
-                default: DDLogError(ValidationError.KEYSTORE_ERROR)
+                }
+                
+            default: DDLogError(ValidationError.KEYSTORE_ERROR)
             }
         }
     }
