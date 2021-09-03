@@ -13,19 +13,21 @@ public protocol DateService {
     func isNowBefore(_ date: Date) -> Bool
 }
 
-struct DefaultDateService : DateService {
-    var now: Date {
+public struct DefaultDateService : DateService {
+    public init() {}
+    
+    public var now: Date {
         get {
             return Date()
         }
     }
     
-    func isNowAfter(_ date: Date) -> Bool {
+    public func isNowAfter(_ date: Date) -> Bool {
         let now = Date()
         return now.isAfter(date)
     }
     
-    func isNowBefore(_ date: Date) -> Bool {
+    public func isNowBefore(_ date: Date) -> Bool {
         let now = Date()
         return now.isBefore(date)
     }

@@ -8,8 +8,18 @@
 import Foundation
 import SwiftCBOR
 
-public struct ValueSetContainer {
-    let valueSets : [ValueSet]
+public struct ValueSetContainer : SignedData, Codable {
+    public let valueSets : [ValueSet]
+    public var hash: Data?
+    
+    enum CodingKeys: String, CodingKey {
+        case valueSets = "v"
+        case hash = "signatureHash"
+    }
+    
+    public init() {
+        valueSets = [ValueSet]()
+    }
     
     init?(from cbor: CBOR) {
         guard let transformedValue = cbor["v"]?.asList()?.compactMap({ entry in
@@ -19,21 +29,25 @@ public struct ValueSetContainer {
         }
         valueSets = transformedValue
     }
+    
+    public var isEmpty: Bool {
+        return valueSets.isEmpty
+    }
 }
 
-public struct ValueSet {
-    let name : String
-    let value : String
+public struct ValueSet : Codable {
+    public let name : String
+    public let value : String
     
-    enum Key : String {
+    enum CodingKeys : String, CodingKey {
         case name = "n"
         case value = "v"
     }
     
     init?(from cbor: CBOR){
         guard let cborMap = cbor.asMap(),
-              let name = cborMap[Key.name]?.asString(),
-              let value = cborMap[Key.value]?.asString() else {
+              let name = cborMap[CodingKeys.name]?.asString(),
+              let value = cborMap[CodingKeys.value]?.asString() else {
             return nil
         }
         self.name = name

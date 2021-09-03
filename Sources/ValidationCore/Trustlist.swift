@@ -9,21 +9,25 @@ import Foundation
 import SwiftCBOR
 import ASN1Decoder
 
-struct TrustList : Codable {
-    let entries : [TrustEntry]
-    var hash: Data?
+public struct TrustList : SignedData, Codable {
+    public let entries : [TrustEntry]
+    public var hash: Data?
     
     enum CodingKeys: String, CodingKey {
         case entries = "c"
         case hash = "signatureHash"
     }
     
-    init() {
+    public init() {
         entries = [TrustEntry]()
     }
     
-    func entry(for keyId: Data) -> TrustEntry? {
+    public func entry(for keyId: Data) -> TrustEntry? {
         return entries.first(where: { entry in entry.keyId == keyId})
+    }
+    
+    public var isEmpty: Bool {
+        return entries.isEmpty
     }
 }
 

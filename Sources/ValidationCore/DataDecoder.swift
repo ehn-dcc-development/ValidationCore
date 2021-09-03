@@ -8,9 +8,10 @@
 import Foundation
 import SwiftCBOR
 
-struct DataDecoder {
+public struct DataDecoder {
+    public init() {}
     
-    func decode(signatureCose: Data, trustAnchor: String, dateService: DateService) throws -> SignatureInfo {
+    public func decode(signatureCose: Data, trustAnchor: String, dateService: DateService) throws -> SignatureInfo {
         guard let cose = Cose(from: signatureCose),
               let trustAnchorKey = key(from: trustAnchor.normalizeCertificate()),
               cose.hasValidSignature(for: trustAnchorKey) else {
@@ -36,7 +37,7 @@ struct DataDecoder {
         return SignatureInfo(validFrom: validFrom, validUntil: validUntil, content: subject)
     }
     
-    func decode(businessRules: Data, signature: Data, trustAnchor: String, dateService: DateService? = nil) throws -> (SignatureInfo, BusinessRulesContainer) {
+    public func decode(businessRules: Data, signature: Data, trustAnchor: String, dateService: DateService? = nil) throws -> (SignatureInfo, BusinessRulesContainer) {
         let signatureInfo = try decode(signatureCose: signature, trustAnchor: trustAnchor, dateService: dateService ?? DefaultDateService())
         let decodedRules = try decode(map: businessRules)
         guard let rules = BusinessRulesContainer(from: decodedRules) else {
@@ -45,7 +46,7 @@ struct DataDecoder {
         return (signatureInfo, rules)
     }
     
-    func decode(valueSets: Data, signature: Data, trustAnchor: String, dateService: DateService? = nil) throws -> (SignatureInfo, ValueSetContainer) {
+    public func decode(valueSets: Data, signature: Data, trustAnchor: String, dateService: DateService? = nil) throws -> (SignatureInfo, ValueSetContainer) {
         let signatureInfo = try decode(signatureCose: signature, trustAnchor: trustAnchor, dateService: dateService ?? DefaultDateService())
         let decodedValueSets = try decode(map: valueSets)
         guard let sets = ValueSetContainer(from: decodedValueSets) else {

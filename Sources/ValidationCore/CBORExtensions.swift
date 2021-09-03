@@ -57,7 +57,7 @@ extension CBOR {
         return self.unwrap() as? [UInt8]
     }
     
-    func asData() -> Data {
+    public func asData() -> Data {
         return Data(self.encode())
     }
      

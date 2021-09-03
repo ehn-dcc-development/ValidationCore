@@ -31,6 +31,8 @@ public enum ValidationError : String, Error, Codable {
     case TRUST_LIST_NOT_YET_VALID = "TRUST_LIST_NOT_YET_VALID"
     case TRUST_LIST_EXPIRED = "TRUST_LIST_EXPIRED"
     
+    case DATA_EXPIRED = "DATA_EXPIRED"
+    
 
     public var message : String {
         switch self {
@@ -56,6 +58,8 @@ public enum ValidationError : String, Error, Codable {
         case .TRUST_LIST_SIGNATURE_INVALID: return "Trustlist signature is not valid"
         case .TRUST_LIST_NOT_YET_VALID: return "Trustlist is not yet valid"
         case .TRUST_LIST_EXPIRED: return "Trustlist is expired"
+            
+        case .DATA_EXPIRED: return "Cached data expired"
         }
     }
 }

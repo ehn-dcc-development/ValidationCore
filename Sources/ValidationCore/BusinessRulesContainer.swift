@@ -8,8 +8,22 @@
 import Foundation
 import SwiftCBOR
 
-public struct BusinessRulesContainer {
-    let rules : [BusinessRule]
+public struct BusinessRulesContainer : SignedData, Codable {
+    public var hash: Data?
+    public var isEmpty: Bool {
+        return rules.isEmpty
+    }
+    
+    public let rules : [BusinessRule]
+    
+    enum CodingKeys: String, CodingKey {
+        case rules = "r"
+        case hash = "signatureHash"
+    }
+    
+    public init() {
+        rules = [BusinessRule]()
+    }
     
     init?(from cbor: CBOR) {
         guard let transformedRules = cbor["r"]?.asList()?.compactMap({ entry in
@@ -21,19 +35,19 @@ public struct BusinessRulesContainer {
     }
 }
 
-public struct BusinessRule {
-    let identifier : String
-    let rule : String
+public struct BusinessRule : Codable {
+    public let identifier : String
+    public let rule : String
     
-    enum Key : String {
+    enum CodingKeys : String, CodingKey {
         case identifier = "i"
         case rule = "r"
     }
     
     init?(from cbor: CBOR) {
         guard let cborMap = cbor.asMap(),
-             let identifier = cborMap[Key.identifier]?.asString(),
-             let rule = cborMap[Key.rule]?.asString() else {
+              let identifier = cborMap[CodingKeys.identifier]?.asString(),
+              let rule = cborMap[CodingKeys.rule]?.asString() else {
             return nil
         }
         self.identifier = identifier

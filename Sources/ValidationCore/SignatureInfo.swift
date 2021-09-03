@@ -8,7 +8,7 @@
 import Foundation
 
 public struct SignatureInfo {
-    let validFrom: Date
-    let validUntil : Date
-    let content: Data
+    public let validFrom: Date
+    public let validUntil : Date
+    public let content: Data
 }
