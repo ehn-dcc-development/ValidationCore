@@ -20,7 +20,7 @@ public struct ValidationCore {
     private let trustlistService : TrustlistService
     private let dateService : DateService
 
-    public init(trustlistService: TrustlistService, dateService: DateService? = nil, trustlistUrl: String? = nil, signatureUrl: String? = nil, trustAnchor : String? = nil, apiKey : String? = nil){
+    public init(trustlistService: TrustlistService, dateService: DateService? = nil){
         self.dateService = dateService ?? DefaultDateService()
         self.trustlistService = trustlistService 
         DDLog.add(DDOSLogger.sharedInstance)
