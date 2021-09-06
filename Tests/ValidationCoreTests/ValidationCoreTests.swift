@@ -53,6 +53,16 @@ class ValidationCoreSpec: QuickSpec {
                     expect(result.error).toEventually(beNil())
                 }
             }
+            
+            it("does not crash on malformed payload") {
+                let testData = testDataProvider.malformedCoseInTestData
+                let dateService = TestDateService(testData)
+                let trustlistService = TestTrustlistService(testData, dateService: dateService)
+                validationCore = ValidationCore(trustlistService: trustlistService, dateService: dateService)
+                validationCore.validate(encodedData: testData.prefixed!) { result in
+                    expect(result.error).toEventually(beError(ValidationError.COSE_DESERIALIZATION_FAILED))
+                }
+            }
         }
     }
     
@@ -87,4 +97,5 @@ class ValidationCoreSpec: QuickSpec {
             expect(error).to(beError(.UNSUITABLE_PUBLIC_KEY_TYPE))
         }
     }
+    
 }

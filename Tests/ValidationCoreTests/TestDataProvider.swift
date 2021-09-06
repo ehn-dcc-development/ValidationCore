@@ -10,6 +10,7 @@ import ValidationCore
 
 class TestDataProvider {
     var testData = [EuTestData]()
+    let malformedCoseInTestData = EuTestData(jsonContent: nil, cborHex: nil, coseHex: nil, base45EncodedAndCompressed: nil, prefixed:    "HC1:K:3N01000000J00TW2HM7YUOL43K$CXAD090%S02T1 7W-1WN5HW8AXFU7FHICK17FE238AP8 N.S2U129V37DOBT1SD2288UNO8123IC6Y9/.QOL601A*5E:5TC39PWEH$T8UF43VBEJWX1SD9U9RLAQGUBHYNXW37R0-IAD*P LFD2D-8KDNPAGEYS1PTN.ACYB9.HCYN0WR05.M+UR9J18$V.KDLM2I:E/DHS55FO37HS. S75N38VCX1HGNLV408JD.HD.DE3E/KLSTG%XPHHLDC4Q2K+$40*BQ5C/PA48DJMRZIECVF+OV%E4GBMLUR940*42QHQGP9$GV..BGUIRIF09M%-JB1GWX8QU2OBW8V2V+LCLKPFDB%2Y-2CWJYYDTCDAXE. KIKLNZD-2VX00X34V%CH4EENC1103OAZ+9+FMDOQOBJ+0765LDW7.-VD.OLOG5BC7KNL%89%F6TQRZJUXPD254I0ADBF.C0JLA.5SDNE S/KPW5EX8Q6Y3Q3WLCELBJDVQG-O*NDQ7QB30C*OPRQV5000", base64BarcodeImage: nil, testContext: TestContext(version: nil, schemaVersion: nil, signingCertificate: nil, validationClock: nil, description: ""), expectedResults: ExpectedResults(isValidObject: nil, isSchemeValidatable: nil, isEncodable: nil, isDecodable: nil, isVerifiable: nil, isUnprefixed: nil, isValidJson: nil, isBase45Decodable: nil, isImageDecodable: nil, isExpired: nil, isKeyUsageMatching: nil))
     
     init(){
         testData = loadTestdata()
@@ -63,7 +64,7 @@ class TestDataProvider {
             self.testData.append(contentsOf: additionalTests)
         }
     }
-    
+
     let additionalTestData = """
 []
 """
