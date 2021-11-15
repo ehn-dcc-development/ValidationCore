@@ -201,3 +201,51 @@ struct Cose {
     }
 }
 
+// MARK: - Encodable
+
+extension Cose : Encodable {
+    enum CodingKeys : String, CodingKey {
+        case type = "type"
+        case protectedHeader = "protectedHeader"
+        case unprotectedHeader = "unprotectedHeader"
+        case payload = "payload"
+        case signature = "signature"
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type, forKey: .type)
+        try container.encode(protectedHeader, forKey: .protectedHeader)
+        try container.encode(unprotectedHeader, forKey: .unprotectedHeader)
+        try container.encode(payload.asData().humanReadable(), forKey: .payload)
+        try container.encode(signature, forKey: .signature)
+    }
+    
+    func asJson() -> String? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        guard let jsonData = try? encoder.encode(self) else {
+           return nil
+        }
+        return String(data: jsonData, encoding: .utf8)
+    }
+}
+
+extension Cose.CoseType : Encodable {}
+
+extension Cose.CoseHeader : Encodable {
+    enum CodingKeys : String, CodingKey {
+        case rawHeader = "rawHeader"
+        case keyId = "keyId"
+        case algorithm = "algorithm"
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(rawHeader?.asData().humanReadable(), forKey: .rawHeader)
+        try container.encode(keyId, forKey: .keyId)
+        try container.encode(algorithm, forKey: .algorithm)
+    }
+}
+
+extension Cose.CoseHeader.Algorithm : Encodable {}

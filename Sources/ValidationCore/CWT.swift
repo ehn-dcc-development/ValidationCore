@@ -101,3 +101,25 @@ public struct CWT {
         return dateService.isNowBefore(expDate)
     }
 }
+
+// MARK: - Encodable
+
+extension CWT : Encodable {
+    enum Codingkeys: String, CodingKey {
+        case iss = "iss"
+        case exp = "exp"
+        case iat = "iat"
+        case nbf = "nbf"
+        case sub = "sub"
+        case euHealthCert = "dgc"
+    }
+    
+    func asJson() -> String? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        guard let jsonData = try? encoder.encode(self) else {
+           return nil
+        }
+        return String(data: jsonData, encoding: .utf8)
+    }
+}
