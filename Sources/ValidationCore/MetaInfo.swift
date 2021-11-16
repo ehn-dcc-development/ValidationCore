@@ -12,11 +12,13 @@ public struct MetaInfo : Codable {
     public let issuedAt : String?
     public let issuer : String?
     public let notBefore : String?
+    public let dgcErrors : [ValidationError]?
     
-    init(from cwt: CWT) {
-        expirationTime = cwt.exp?.toIso8601DateString()
-        issuedAt = cwt.iat?.toIso8601DateString()
-        issuer = cwt.iss
-        notBefore = cwt.nbf?.toIso8601DateString()
+    init(from cwt: CWT?, errors : [ValidationError]? = nil) {
+        expirationTime = cwt?.exp?.toIso8601DateString()
+        issuedAt = cwt?.iat?.toIso8601DateString()
+        issuer = cwt?.iss
+        notBefore = cwt?.nbf?.toIso8601DateString()
+        dgcErrors = errors
     }
 }

@@ -55,4 +55,10 @@ public class X509TrustlistService : TrustlistService {
     public func updateTrustlistIfNecessary(completionHandler: @escaping (ValidationError?) -> ()) {
         /* not used */
     }
+    
+    public func debugInformation(for keyId: Data, certType: CertType?, cwt: CWT?) -> [String : String] {
+        /* not used */
+        return [:]
+    }
+    
 }

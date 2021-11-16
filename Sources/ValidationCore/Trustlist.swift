@@ -101,6 +101,11 @@ public struct TrustEntry : Codable {
         return certificate.checkValidity(dateService.now)
     }
     
+    public var debugInformation : [String:String] {
+        return ["signatureCert": cert.asHex(),
+                "readableSignatureCert": (try? X509Certificate(data: cert).description) ?? ""]
+    }
+    
     private func isType(in certificate: X509Certificate) -> Bool {
         return nil != certificate.extensionObject(oid: OID_TEST)
             || nil != certificate.extensionObject(oid: OID_VACCINATION)

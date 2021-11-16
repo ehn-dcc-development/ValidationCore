@@ -10,8 +10,8 @@ import SwiftCBOR
 
 
 public struct EuHealthCert : Codable {
-    public let person: Person
-    public let dateOfBirth : String
+    public var person: Person
+    public var dateOfBirth : String
     public let version: String
     public let vaccinations: [Vaccination]?
     public let recovery: [Recovery]?
@@ -60,10 +60,10 @@ public struct EuHealthCert : Codable {
 
 
 public struct Person : Codable {
-    public let givenName: String?
-    public let standardizedGivenName: String?
-    public let familyName: String?
-    public let standardizedFamilyName: String
+    public var givenName: String?
+    public var standardizedGivenName: String?
+    public var familyName: String?
+    public var standardizedFamilyName: String
     
     private enum CodingKeys : String, CodingKey {
         case givenName = "gn"

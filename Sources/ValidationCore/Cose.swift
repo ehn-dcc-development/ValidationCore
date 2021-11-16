@@ -217,7 +217,7 @@ extension Cose : Encodable {
         try container.encode(type, forKey: .type)
         try container.encode(protectedHeader, forKey: .protectedHeader)
         try container.encode(unprotectedHeader, forKey: .unprotectedHeader)
-        try container.encode(payload.asData().humanReadable(), forKey: .payload)
+        try container.encode(payload.asData().asHex(useSpaces: false), forKey: .payload)
         try container.encode(signature, forKey: .signature)
     }
     
@@ -242,8 +242,8 @@ extension Cose.CoseHeader : Encodable {
     
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(rawHeader?.asData().humanReadable(), forKey: .rawHeader)
-        try container.encode(keyId, forKey: .keyId)
+        try container.encode(rawHeader?.asData().asHex(useSpaces: false), forKey: .rawHeader)
+        try container.encode(Data(keyId ?? []).asHex(useSpaces: false), forKey: .keyId)
         try container.encode(algorithm, forKey: .algorithm)
     }
 }

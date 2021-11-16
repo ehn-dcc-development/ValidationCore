@@ -14,7 +14,7 @@ public struct CWT {
     let iat : UInt64?
     let nbf : UInt64?
     let sub : Data?
-    public let euHealthCert : EuHealthCert?
+    public var euHealthCert : EuHealthCert?
     
     enum PayloadKeys : Int {
         case iss = 1

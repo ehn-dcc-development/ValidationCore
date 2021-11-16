@@ -9,7 +9,6 @@ import CocoaLumberjackSwift
 import Foundation
 
 class DebugLogFileManager: DDLogFileManagerDefault {
-    private let dateFormat = "YYYY-MM-ddThh:mm:ss"
     private let logPrefix = "log_"
     private let logSuffix = ".txt"
 
@@ -20,8 +19,8 @@ class DebugLogFileManager: DDLogFileManagerDefault {
 
     override var newLogFileName: String {
         let date = Date()
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = dateFormat
-        return "\(logPrefix)\(dateFormatter.string(from: date))\(logSuffix)"
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withDashSeparatorInDate, .withInternetDateTime, .withTimeZone]
+        return "\(logPrefix)\(dateFormatter.string(from: date).replacingOccurrences(of: ":", with: "-"))\(logSuffix)"
     }
 }

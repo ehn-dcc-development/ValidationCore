@@ -51,13 +51,13 @@ public struct ValidationCore {
             completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .BASE_45_DECODING_FAILED))
             return
         }
-        DDLogDebug("Base45-decoded data: \(decodedData.humanReadable())")
+        DDLogDebug("Base45-decoded data: \(decodedData.asHex())")
         
         guard let decompressedData = decompress(decodedData) else {
             completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .DECOMPRESSION_FAILED))
             return
         }
-        DDLogDebug("Decompressed data: \(decompressedData.humanReadable())")
+        DDLogDebug("Decompressed data: \(decompressedData.asHex())")
 
         guard let cose = cose(from: decompressedData),
               let keyId = cose.keyId else {
@@ -137,8 +137,8 @@ public struct ValidationCore {
 extension ValidationCore {
     
     ///Debug an Base45-encoded EHN health certificate
-    public func debug(encodedData: String, _ completionHandler: @escaping (ValidationResult) -> ()) {
-        guard let loggingDirectory = loggingDirectory()?.path else {
+    public func debug(encodedData: String, anonymizePersonalData: Bool, _ completionHandler: @escaping (ValidationResult) -> ()) {
+       guard let loggingDirectory = loggingDirectory()?.path else {
             DDLogInfo("Cannot create logging directory, skipping debug")
             return
         }
@@ -146,7 +146,7 @@ extension ValidationCore {
         debugFileManager.maximumNumberOfLogFiles = 50
         let fileLogger = DDFileLogger(logFileManager: debugFileManager)
         DDLog.add(fileLogger)
-        var result = [ValidationError]()
+        var errors = [ValidationError]()
         
         fileLogger.rollLogFile(withCompletion: {
             DDLogInfo("Scanned QR code payload: \(encodedData)")
@@ -157,54 +157,77 @@ extension ValidationCore {
                 encodedString = unprefixedEncodedString
             } else {
                 DDLogInfo("QR code data has incorrect prefix: \(encodedData.prefix(4)) (should be \(PREFIX))")
-                result.append(.INVALID_SCHEME_PREFIX)
+                errors.append(.INVALID_SCHEME_PREFIX)
             }
             
             //Try decoding in both cases
             var decodedData = decode(encodedString)
             if nil == decodedData {
                 DDLogInfo("QR code data is not decodable from Base45")
-                result.append(.BASE_45_DECODING_FAILED)
+                errors.append(.BASE_45_DECODING_FAILED)
             }
-            DDLogInfo("QR code payload without prefix:\nBase64: \(decodedData?.base64EncodedString() ?? "<n/a>")\nHex: \(decodedData?.humanReadable() ?? "<n/a>")")
+            DDLogInfo("QR code payload without prefix:\nBase64: \(decodedData?.base64EncodedString() ?? "<n/a>")\nHex: \(decodedData?.asHex(useSpaces: false) ?? "<n/a>")")
 
             //Try inflating
             var decompressedData = decompress(decodedData ?? Data())
             if nil == decompressedData {
                 DDLogInfo("Payload cannot be inflated, proceeding without")
                 decompressedData = decodedData
-                result.append(.DECOMPRESSION_FAILED)
+                errors.append(.DECOMPRESSION_FAILED)
             } else {
                 DDLogInfo("Data is decompressable\n")
             }
-            DDLogInfo("Base64: \(decompressedData?.base64EncodedString() ?? "<n/a>")\nHex: \(decompressedData?.humanReadable() ?? "<n/a>")")
+            DDLogInfo("Base64: \(decompressedData?.base64EncodedString() ?? "<n/a>")\nHex: \(decompressedData?.asHex(useSpaces: false) ?? "<n/a>")")
 
             let cose = cose(from: decompressedData ?? Data())
             let keyId = cose?.keyId ?? Data()
             if nil == cose {
-                result.append(.COSE_DESERIALIZATION_FAILED)
+                errors.append(.COSE_DESERIALIZATION_FAILED)
             }
             DDLogInfo("COSE structure: \(cose?.asJson() ?? "<n/a")")
             
-            //TODO retrieve keyId and log certificate
-            
-            let cwt = CWT(from: cose?.payload ?? CBOR.null)
+            var cwt = CWT(from: cose?.payload ?? CBOR.null)
             if nil == cwt {
-                result.append(.CBOR_DESERIALIZATION_FAILED)
+                errors.append(.CBOR_DESERIALIZATION_FAILED)
+            }
+            
+            if anonymizePersonalData {
+                cwt?.euHealthCert?.dateOfBirth = "***"
+                cwt?.euHealthCert?.person.familyName = "***"
+                cwt?.euHealthCert?.person.givenName = "***"
+                cwt?.euHealthCert?.person.standardizedGivenName = "***"
+                cwt?.euHealthCert?.person.standardizedFamilyName = "***"
             }
             DDLogInfo("CWT structure: \(cwt?.asJson() ?? "<n/a>")")
             let euHealthCert = cwt?.euHealthCert
             
-            var metaInfo : MetaInfo? = nil
-            if let cwt = cwt {
-                metaInfo = MetaInfo(from: cwt)
-            }
-            
-            //TODO validate
+            //TODO retrieve keyId and log signature certificate and trustlist infos
+            let certInfo = trustlistService.debugInformation(for: keyId, certType: euHealthCert?.type, cwt: cwt)
 
-            completionHandler(ValidationResult(isValid: false, metaInformation: metaInfo, greenpass: euHealthCert, error: result.first))
+            trustlistService.key(for: keyId, keyType: euHealthCert?.type ?? .vaccination) { result in
+                switch result {
+                case .success(let key):
+                    if let cose = cose, !cose.hasValidSignature(for: key) {
+                        DDLogInfo("Invalid COSE signature")
+                        errors.append(.SIGNATURE_INVALID)
+                    }
+                    
+                    if let cwt = cwt, !cwt.isValid(using: dateService){
+                        DDLogInfo("CWT is no longer valid")
+                        errors.append(.CWT_EXPIRED)
+                    }
+                    DDLogInfo("Greenpass seems valid")
+                    completionHandler(ValidationResult(isValid: true, metaInformation: MetaInfo(from: cwt, errors: errors), greenpass: euHealthCert, error: nil))
+                    return
+                case .failure(let error):
+                    errors.append(error)
+                }
+            }
+
+            DDLogInfo("Greenpass seems invalid")
+            completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: cwt, errors: errors), greenpass: euHealthCert, error: errors.first))
         })
-   }
+    }
     
     public func getLogFiles() -> [URL]? {
         var dirContent = loggingDirContent()
@@ -212,8 +235,7 @@ extension ValidationCore {
             one.lastPathComponent < other.lastPathComponent
         })
         return dirContent
-
-    }
+   }
     
     // Deletes all log files
     public func deleteLogFiles() {
@@ -265,8 +287,8 @@ extension ValidationCore : QrCodeReceiver {
             self.completionHandler?(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .QR_CODE_ERROR))
             return
         }
-        debug(encodedData: result, completionHandler)
-        validate(encodedData: result, completionHandler)
+        debug(encodedData: result, anonymizePersonalData: true, completionHandler)
+//        validate(encodedData: result, completionHandler)
     }
 }
 #endif
