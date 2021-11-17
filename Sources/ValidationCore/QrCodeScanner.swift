@@ -111,7 +111,7 @@ public class QrCodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     @objc
     public func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject],
                                from connection: AVCaptureConnection) {
-        DDLogInfo("Detected QRCode")
+        DDLogDebug("Detected QRCode")
         guard let metadataObject = metadataObjects.first,
             let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject,
             let stringValue = readableObject.stringValue else {

@@ -41,7 +41,7 @@ public struct ValidationCore {
     
     /// Validate an Base45-encoded EHN health certificate
     public func validate(encodedData: String, _ completionHandler: @escaping (ValidationResult) -> ()) {
-        DDLogInfo("Starting validation")
+        DDLogDebug("Starting validation")
         guard let unprefixedEncodedString = removeScheme(prefix: PREFIX, from: encodedData) else {
             completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .INVALID_SCHEME_PREFIX))
             return
@@ -138,14 +138,16 @@ extension ValidationCore {
     
     ///Debug an Base45-encoded EHN health certificate
     public func debug(encodedData: String, anonymizePersonalData: Bool, _ completionHandler: @escaping (ValidationResult) -> ()) {
-       guard let loggingDirectory = loggingDirectory()?.path else {
+        guard let loggingDirectory = loggingDirectory()?.path else {
             DDLogInfo("Cannot create logging directory, skipping debug")
             return
         }
+        DDLog.removeAllLoggers()
         let debugFileManager = DebugLogFileManager(logsDirectory: loggingDirectory)
         debugFileManager.maximumNumberOfLogFiles = 50
         let fileLogger = DDFileLogger(logFileManager: debugFileManager)
-        DDLog.add(fileLogger)
+        fileLogger.doNotReuseLogFiles = true
+        DDLog.add(fileLogger, with: .info)
         var errors = [ValidationError]()
         
         fileLogger.rollLogFile(withCompletion: {
@@ -202,7 +204,16 @@ extension ValidationCore {
             let euHealthCert = cwt?.euHealthCert
             
             //TODO retrieve keyId and log signature certificate and trustlist infos
-            let certInfo = trustlistService.debugInformation(for: keyId, certType: euHealthCert?.type, cwt: cwt)
+            let trustlistDebugInfo = trustlistService.debugInformation(for: keyId, certType: euHealthCert?.type, cwt: cwt)
+            if let trustlistErrors = trustlistDebugInfo.trustlistErrors {
+                errors.append(contentsOf: trustlistErrors)
+            }
+            if let signatureCertInfo = trustlistDebugInfo.signatureCertInfo {
+                DDLogInfo("Signature certificate info:\nDER: \(signatureCertInfo.certDer)\nBase64: \(signatureCertInfo.certBase64)\nCertificate description: \(signatureCertInfo.cert ?? "<n/a>")")
+            } else {
+                DDLogInfo("No suitable signature certificate found in trustlist")
+            }
+            DDLogInfo("Trustlist info:\nTrustlist URL: \(trustlistDebugInfo.trustlistInfo.url)\nDownload log URL: \(trustlistDebugInfo.trustlistInfo.downloadLogUrl)\nEntries: \(trustlistDebugInfo.trustlistInfo.entries)\nDownloaded: \(trustlistDebugInfo.trustlistInfo.downloadedAt)\nExpiration: \(trustlistDebugInfo.trustlistInfo.expiration)")
 
             trustlistService.key(for: keyId, keyType: euHealthCert?.type ?? .vaccination) { result in
                 switch result {
@@ -217,16 +228,16 @@ extension ValidationCore {
                         errors.append(.CWT_EXPIRED)
                     }
                     DDLogInfo("Greenpass seems valid")
-                    completionHandler(ValidationResult(isValid: true, metaInformation: MetaInfo(from: cwt, errors: errors), greenpass: euHealthCert, error: nil))
+                    completionHandler(ValidationResult(isValid: true, metaInformation: MetaInfo(from: cwt, signatureCertInfo: trustlistDebugInfo.signatureCertInfo, trustlistInfo: trustlistDebugInfo.trustlistInfo, errors: errors), greenpass: euHealthCert, error: nil))
                     return
                 case .failure(let error):
                     errors.append(error)
+                    DDLogInfo("Greenpass seems invalid")
+                    completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: cwt, signatureCertInfo: trustlistDebugInfo.signatureCertInfo, trustlistInfo: trustlistDebugInfo.trustlistInfo, errors: errors), greenpass: euHealthCert, error: errors.first))
                 }
+                DDLog.flushLog()
             }
-
-            DDLogInfo("Greenpass seems invalid")
-            completionHandler(ValidationResult(isValid: false, metaInformation: MetaInfo(from: cwt, errors: errors), greenpass: euHealthCert, error: errors.first))
-        })
+       })
     }
     
     public func getLogFiles() -> [URL]? {
@@ -235,7 +246,7 @@ extension ValidationCore {
             one.lastPathComponent < other.lastPathComponent
         })
         return dirContent
-   }
+    }
     
     // Deletes all log files
     public func deleteLogFiles() {
