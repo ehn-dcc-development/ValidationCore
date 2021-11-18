@@ -18,6 +18,8 @@ public struct ValidationCore {
     private var completionHandler : ((ValidationResult) -> ())?
     #if canImport(UIKit)
     private var scanner : QrCodeScanner?
+    private var shouldDebug = false
+    private var shouldAnonymize = false
     #endif
     private let trustlistService : TrustlistService
     private let dateService : DateService
@@ -35,6 +37,14 @@ public struct ValidationCore {
     public mutating func validateQrCode(_ qrView : UIView, _ completionHandler: @escaping (ValidationResult) -> ()){
         self.completionHandler = completionHandler
         self.scanner = QrCodeScanner()
+        scanner?.scan(qrView, self)
+    }
+    
+    public mutating func debugQrCode(_ qrView : UIView, shouldAnonymize: Bool, _ completionHandler: @escaping (ValidationResult) -> ()){
+        self.completionHandler = completionHandler
+        self.scanner = QrCodeScanner()
+        self.shouldDebug = true
+        self.shouldAnonymize = shouldAnonymize
         scanner?.scan(qrView, self)
     }
     #endif
@@ -163,7 +173,7 @@ extension ValidationCore {
             }
             
             //Try decoding in both cases
-            var decodedData = decode(encodedString)
+            let decodedData = decode(encodedString)
             if nil == decodedData {
                 DDLogInfo("QR code data is not decodable from Base45")
                 errors.append(.BASE_45_DECODING_FAILED)
@@ -298,8 +308,11 @@ extension ValidationCore : QrCodeReceiver {
             self.completionHandler?(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .QR_CODE_ERROR))
             return
         }
-        debug(encodedData: result, anonymizePersonalData: true, completionHandler)
-//        validate(encodedData: result, completionHandler)
+        if shouldDebug {
+            debug(encodedData: result, anonymizePersonalData: shouldAnonymize, completionHandler)
+            return
+        }
+        validate(encodedData: result, completionHandler)
     }
 }
 #endif
