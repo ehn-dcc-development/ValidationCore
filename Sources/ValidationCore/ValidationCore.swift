@@ -183,14 +183,11 @@ extension ValidationCore {
 
             //Try inflating
             var decompressedData = decompress(decodedData ?? Data())
+            DDLogInfo("Data is \((nil == decompressedData) ? "not" : "") inflatable\nBase64: \(decompressedData?.base64EncodedString() ?? "<n/a>")\nHex: \(decompressedData?.asHex(useSpaces: false) ?? "<n/a>")")
             if nil == decompressedData {
-                DDLogInfo("Payload cannot be inflated, proceeding without")
                 decompressedData = decodedData
                 errors.append(.DECOMPRESSION_FAILED)
-            } else {
-                DDLogInfo("Data is decompressable\n")
             }
-            DDLogInfo("Base64: \(decompressedData?.base64EncodedString() ?? "<n/a>")\nHex: \(decompressedData?.asHex(useSpaces: false) ?? "<n/a>")")
 
             let cose = cose(from: decompressedData ?? Data())
             let keyId = cose?.keyId ?? Data()
