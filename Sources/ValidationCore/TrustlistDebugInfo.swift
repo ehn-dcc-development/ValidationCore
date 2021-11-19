@@ -20,18 +20,18 @@ public struct TrustlistDebugInfo {
 }
 
 public struct SignatureCertInfo : Codable {
-    let certDer: String
-    let certBase64 : String
-    let cert : String?
-    let keyId : String
+    public let certDer: String
+    public let certBase64 : String
+    public let cert : String?
+    public let keyId : String
 }
 
 public struct TrustlistInfo : Codable {
-    let expiration : Date
-    let downloadedAt: Date
-    let entries: Int
-    let url: String
-    var downloadLogUrl : String {
+    public let expiration : Date
+    public let downloadedAt: Date
+    public let entries: Int
+    public let url: String
+    public var downloadLogUrl : String {
         get {
             if !url.contains("qr.gv.at") {
                 return ""
