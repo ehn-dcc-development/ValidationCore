@@ -37,6 +37,7 @@ public struct ValidationCore {
     public mutating func validateQrCode(_ qrView : UIView, _ completionHandler: @escaping (ValidationResult) -> ()){
         self.completionHandler = completionHandler
         self.scanner = QrCodeScanner()
+        self.shouldDebug = false
         scanner?.scan(qrView, self)
     }
     
@@ -50,7 +51,7 @@ public struct ValidationCore {
     #endif
     
     /// Validate an Base45-encoded EHN health certificate
-    public func validate(encodedData: String, _ completionHandler: @escaping (ValidationResult) -> ()) {
+    private func validate(encodedData: String, _ completionHandler: @escaping (ValidationResult) -> ()) {
         DDLogDebug("Starting validation")
         guard let unprefixedEncodedString = removeScheme(prefix: PREFIX, from: encodedData) else {
             completionHandler(ValidationResult(isValid: false, metaInformation: nil, greenpass: nil, error: .INVALID_SCHEME_PREFIX))
