@@ -216,7 +216,7 @@ extension ValidationCore {
                 errors.append(contentsOf: trustlistErrors)
             }
             if let signatureCertInfo = trustlistDebugInfo.signatureCertInfo {
-                DDLogInfo("Signature certificate info:\nDER: \(signatureCertInfo.certDer)\nBase64: \(signatureCertInfo.certBase64)\nCertificate description: \(signatureCertInfo.cert ?? "<n/a>")")
+                DDLogInfo("Signature certificate info:\nKey ID: \(signatureCertInfo.keyId)\nDER: \(signatureCertInfo.certDer)\nBase64: \(signatureCertInfo.certBase64)\nCertificate description: \(signatureCertInfo.cert ?? "<n/a>")")
             } else {
                 DDLogInfo("No suitable signature certificate found in trustlist")
             }
