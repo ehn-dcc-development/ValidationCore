@@ -211,7 +211,6 @@ extension ValidationCore {
             DDLogInfo("CWT structure: \(cwt?.asJson() ?? "<n/a>")")
             let euHealthCert = cwt?.euHealthCert
             
-            //TODO retrieve keyId and log signature certificate and trustlist infos
             let trustlistDebugInfo = trustlistService.debugInformation(for: keyId, certType: euHealthCert?.type, cwt: cwt)
             if let trustlistErrors = trustlistDebugInfo.trustlistErrors {
                 errors.append(contentsOf: trustlistErrors)

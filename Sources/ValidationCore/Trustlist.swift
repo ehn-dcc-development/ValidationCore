@@ -102,7 +102,7 @@ public struct TrustEntry : Codable {
     }
     
     public var debugInformation : SignatureCertInfo {
-        return SignatureCertInfo(certDer: cert.asHex(useSpaces: false), certBase64: cert.base64EncodedString(), cert: try? X509Certificate(data: cert).description)
+        return SignatureCertInfo(certDer: cert.asHex(useSpaces: false), certBase64: cert.base64EncodedString(), cert: try? X509Certificate(data: cert).description, keyId: self.keyId.asHex(useSpaces: false))
     }
     
     private func isType(in certificate: X509Certificate) -> Bool {

@@ -23,6 +23,7 @@ public struct SignatureCertInfo : Codable {
     let certDer: String
     let certBase64 : String
     let cert : String?
+    let keyId : String
 }
 
 public struct TrustlistInfo : Codable {
