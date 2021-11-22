@@ -36,7 +36,7 @@ public struct TrustlistInfo : Codable {
             if !url.contains("qr.gv.at") {
                 return ""
             }
-            return "\(url)/downloadlog"
+            return url.replacingOccurrences(of: "/trustlist", with: "/downloadlog")
         }
     }
 }
