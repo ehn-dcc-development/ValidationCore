@@ -235,7 +235,7 @@ extension ValidationCore {
                         errors.append(.CWT_EXPIRED)
                     }
                     DDLogInfo("Greenpass seems valid")
-                    completionHandler(ValidationResult(isValid: true, metaInformation: MetaInfo(from: cwt, signatureCertInfo: trustlistDebugInfo.signatureCertInfo, trustlistInfo: trustlistDebugInfo.trustlistInfo, errors: errors), greenpass: euHealthCert, error: nil))
+                    completionHandler(ValidationResult(isValid: errors.isEmpty, metaInformation: MetaInfo(from: cwt, signatureCertInfo: trustlistDebugInfo.signatureCertInfo, trustlistInfo: trustlistDebugInfo.trustlistInfo, errors: errors), greenpass: euHealthCert, error: errors.first))
                     return
                 case .failure(let error):
                     errors.append(error)
