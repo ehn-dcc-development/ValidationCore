@@ -102,7 +102,7 @@ public struct TrustEntry : Codable {
     }
     
     public var debugInformation : SignatureCertInfo {
-        return SignatureCertInfo(certDer: cert.asHex(useSpaces: false), certBase64: cert.base64EncodedString(), cert: try? X509Certificate(data: cert).description, keyId: self.keyId.asHex(useSpaces: false))
+        return SignatureCertInfo(certDer: cert.asHex(useSpaces: false), certBase64: cert.base64EncodedString(), cert: readableCertInfo(), keyId: self.keyId.asHex(useSpaces: false))
     }
     
     private func isType(in certificate: X509Certificate) -> Bool {
@@ -112,6 +112,47 @@ public struct TrustEntry : Codable {
             || nil != certificate.extensionObject(oid: OID_ALT_TEST)
             || nil != certificate.extensionObject(oid: OID_ALT_VACCINATION)
             || nil != certificate.extensionObject(oid: OID_ALT_RECOVERY)
+    }
+    
+    private func readableCertInfo() -> String {
+        guard let x509Cert = try? X509Certificate(data: cert) else {
+            return ""
+        }
+        let placeholder = "<N/A>"
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withSpaceBetweenDateAndTime, .withFullDate, .withFullTime, .withTimeZone]
+        let sigAlg = x509Cert.sigAlgName ?? x509Cert.sigAlgOID ?? placeholder
+        var serial = placeholder
+        if let serialNumber = x509Cert.serialNumber?.uint64Value {
+            serial = "\(serialNumber)"
+        }
+        var notBefore = placeholder
+        if let notBeforeDate = x509Cert.notBefore {
+            notBefore = dateFormatter.string(from: notBeforeDate)
+        }
+        var notAfter = placeholder
+        if let notAfterDate = x509Cert.notAfter {
+            notAfter = dateFormatter.string(from: notAfterDate)
+        }
+        var version = placeholder
+        if let certVersion = x509Cert.version {
+            version = "\(certVersion)"
+        }
+        let issuer = x509Cert.issuerDistinguishedName ?? placeholder
+        let criticalExtensionOIDs = "\(x509Cert.criticalExtensionOIDs)"
+        let nonCriticalExtensionOIDs = "\(x509Cert.nonCriticalExtensionOIDs)"
+        let subject = x509Cert.subjectDistinguishedName ?? placeholder
+        return """
+               Subject: \(subject)\n
+               Not Before: \(notBefore)\n
+               Not After: \(notAfter)\n
+               Issuer: \(issuer)\n
+               Version: \(version)\n
+               Serial: \(serial)\n
+               Signature Alg: \(sigAlg)\n
+               Critical Extension OIDs: \(criticalExtensionOIDs)\n
+               Noncritical Extension OIDs: \(nonCriticalExtensionOIDs)
+               """
     }
 }
 
