@@ -143,14 +143,14 @@ public struct TrustEntry : Codable {
         let nonCriticalExtensionOIDs = "\(x509Cert.nonCriticalExtensionOIDs)"
         let subject = x509Cert.subjectDistinguishedName ?? placeholder
         return """
-               Subject: \(subject)\n
-               Not Before: \(notBefore)\n
-               Not After: \(notAfter)\n
-               Issuer: \(issuer)\n
-               Version: \(version)\n
-               Serial: \(serial)\n
-               Signature Alg: \(sigAlg)\n
-               Critical Extension OIDs: \(criticalExtensionOIDs)\n
+               Subject: \(subject)
+               Not Before: \(notBefore)
+               Not After: \(notAfter)
+               Issuer: \(issuer)
+               Version: \(version)
+               Serial: \(serial)
+               Signature Alg: \(sigAlg)
+               Critical Extension OIDs: \(criticalExtensionOIDs)
                Noncritical Extension OIDs: \(nonCriticalExtensionOIDs)
                """
     }
