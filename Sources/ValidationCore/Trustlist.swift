@@ -123,8 +123,8 @@ public struct TrustEntry : Codable {
         dateFormatter.formatOptions = [.withSpaceBetweenDateAndTime, .withFullDate, .withFullTime, .withTimeZone]
         let sigAlg = x509Cert.sigAlgName ?? x509Cert.sigAlgOID ?? placeholder
         var serial = placeholder
-        if let serialNumber = x509Cert.serialNumber?.uint64Value {
-            serial = "\(serialNumber)"
+        if let serialNumber = x509Cert.serialNumber?.asHex(useSpaces: false) {
+            serial = "0x\(serialNumber)"
         }
         var notBefore = placeholder
         if let notBeforeDate = x509Cert.notBefore {
