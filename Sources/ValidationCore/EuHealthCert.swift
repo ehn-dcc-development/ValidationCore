@@ -117,16 +117,10 @@ public struct Vaccination : Codable {
         } else {
             self.doseNumber = try container.decode(UInt64.self, forKey: .doseNumber)
         }
-        guard 1..<10 ~= self.doseNumber else {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
-        }
         if let totalDoses = try? container.decode(Double.self, forKey: .totalDoses) {
             self.totalDoses = UInt64(totalDoses)
         } else {
             self.totalDoses = try container.decode(UInt64.self, forKey: .totalDoses)
-        }
-        guard 1..<10 ~= totalDoses else {
-            throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.vaccinationDate = try container.decode(String.self, forKey: .vaccinationDate)
         guard vaccinationDate.isValidIso8601Date() else {
