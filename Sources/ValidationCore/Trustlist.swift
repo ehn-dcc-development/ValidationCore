@@ -65,6 +65,8 @@ public struct TrustEntry : Codable {
                 return nil != certificate.extensionObject(oid: OID_VACCINATION) || nil != certificate.extensionObject(oid: OID_ALT_VACCINATION)
             case .recovery:
                 return nil != certificate.extensionObject(oid: OID_RECOVERY) || nil != certificate.extensionObject(oid: OID_ALT_RECOVERY)
+            case .vaccinationExemption:
+                return false //TODO check if there exists a oic for exemptions
             }
         }
         DDLogDebug("Using trustlist certificate \(self.cert.base64EncodedString()) for validation")
@@ -160,6 +162,7 @@ public enum CertType : String, Codable {
     case test = "t"
     case recovery = "r"
     case vaccination = "v"
+    case vaccinationExemption = "ve"
 }
 
 enum KeyType : String, Codable {

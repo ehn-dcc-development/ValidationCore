@@ -14,7 +14,7 @@ public struct CWT {
     let iat : UInt64?
     let nbf : UInt64?
     let sub : Data?
-    public var euHealthCert : EuHealthCert?
+    public var healthCert : HealthCert?
     
     enum PayloadKeys : Int {
         case iss = 1
@@ -39,12 +39,12 @@ public struct CWT {
         nbf = decodedPayload[PayloadKeys.nbf]?.asUInt64() ?? decodedPayload[PayloadKeys.nbf]?.asDouble()?.toUInt64()
         sub = decodedPayload[PayloadKeys.sub]?.asData()
         
-        var euHealthCert : EuHealthCert? = nil
+        var healthCert : HealthCert? = nil
         if let hCertMap = decodedPayload[PayloadKeys.hcert]?.asMap(),
            let certData = hCertMap[PayloadKeys.HcertKeys.euHealthCertV1]?.asData() {
-            euHealthCert = try? CodableCBORDecoder().decode(EuHealthCert.self, from: certData)
+            healthCert = try? CodableCBORDecoder().decode(HealthCert.self, from: certData)
         }
-        self.euHealthCert = euHealthCert
+        self.healthCert = healthCert
     }
     
     public var issuedAt : Date? {
@@ -111,7 +111,7 @@ extension CWT : Encodable {
         case iat = "iat"
         case nbf = "nbf"
         case sub = "sub"
-        case euHealthCert = "dgc"
+        case healthCert = "dgc"
     }
     
     func asJson() -> String? {

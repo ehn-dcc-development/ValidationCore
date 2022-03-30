@@ -13,28 +13,13 @@ class TestDataProvider {
     let malformedCoseInTestData = EuTestData(jsonContent: nil, cborHex: nil, coseHex: nil, base45EncodedAndCompressed: nil, prefixed:    "HC1:K:3N01000000J00TW2HM7YUOL43K$CXAD090%S02T1 7W-1WN5HW8AXFU7FHICK17FE238AP8 N.S2U129V37DOBT1SD2288UNO8123IC6Y9/.QOL601A*5E:5TC39PWEH$T8UF43VBEJWX1SD9U9RLAQGUBHYNXW37R0-IAD*P LFD2D-8KDNPAGEYS1PTN.ACYB9.HCYN0WR05.M+UR9J18$V.KDLM2I:E/DHS55FO37HS. S75N38VCX1HGNLV408JD.HD.DE3E/KLSTG%XPHHLDC4Q2K+$40*BQ5C/PA48DJMRZIECVF+OV%E4GBMLUR940*42QHQGP9$GV..BGUIRIF09M%-JB1GWX8QU2OBW8V2V+LCLKPFDB%2Y-2CWJYYDTCDAXE. KIKLNZD-2VX00X34V%CH4EENC1103OAZ+9+FMDOQOBJ+0765LDW7.-VD.OLOG5BC7KNL%89%F6TQRZJUXPD254I0ADBF.C0JLA.5SDNE S/KPW5EX8Q6Y3Q3WLCELBJDVQG-O*NDQ7QB30C*OPRQV5000", base64BarcodeImage: nil, testContext: TestContext(version: nil, schemaVersion: nil, signingCertificate: nil, validationClock: nil, description: ""), expectedResults: ExpectedResults(isValidObject: nil, isSchemeValidatable: nil, isEncodable: nil, isDecodable: nil, isVerifiable: nil, isUnprefixed: nil, isValidJson: nil, isBase45Decodable: nil, isImageDecodable: nil, isExpired: nil, isKeyUsageMatching: nil))
     
     init(){
-//        testData = loadTestdata()
+        testData = loadTestdata()
         addAdditionalTests()
     }
     
-    private func jsonDecoder() -> JSONDecoder {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .custom { decoder in
-            let value = try decoder.singleValueContainer()
-            let formatter = ISO8601DateFormatter()
-            let isoString = try value.decode(String.self)
-            if let date = formatter.date(from: isoString) {
-                return date
-            }
-            formatter.formatOptions = [.withFractionalSeconds]
-            return formatter.date(from: isoString)!
-        }
-        return decoder
-    }
-    
-    private func loadTestdata() -> [EuTestData] {
+   private func loadTestdata() -> [EuTestData] {
         var fileContents = [EuTestData]()
-        let decoder = jsonDecoder()
+        let decoder = jsonTestDecoder()
         let url = Bundle.module.bundleURL.appendingPathComponent("Testdata")
         if let dirContent = try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isDirectoryKey]) {
             for dir in dirContent.filter({ path in (try? path.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }) {
@@ -59,12 +44,18 @@ class TestDataProvider {
     }
     
     private func addAdditionalTests() {
-        if let testData = additionalTestData.data(using: .utf8),
-           let additionalTests = try? jsonDecoder().decode([EuTestData].self, from: testData) {
+        if let additionalTests = decodeTests(from: additionalTestData) {
             self.testData.append(contentsOf: additionalTests)
         }
     }
 
+    func decodeTests(from jsonText: String) -> [EuTestData]? {
+    if let data = jsonText.data(using: .utf8) {
+        return try? jsonTestDecoder().decode([EuTestData].self, from: data)
+    }
+    return nil
+}
+    
     let additionalTestData = """
 [{
                 "PREFIX": "HC1:6BF%RN%TSMAHN-HVUOEJPJ-QNT3BNN0II4WFC9B:OQW.7LQCCJ9T$U+OCDTU--M:UC*GP-S4FT5D75W9AAABE34L/5R3FMIA5.BR9E+-C2+86LF4MH7DANI94JBTC96FM:3DK196LFGD9+PBLTL8KES/F-1JZ.KDKL6JKX2M0ECGGBYPLR-S:G10EQ928GEQW2DVJ55M8G1A9L5TM8/H0QF6IS6G%64.U4G6PF5RBQ746B46O1N646RM93O5RF6$T61R64IM646-3AQ$95:UENEUW6646C46846OR6UF5 QVCCOE700OP D9M1MPHN6D7LLK*2HG%89UV-0LZ 2.A5:01395*CBVZ0K1H$$0VON./GZJJQU2K+5MV0GX89LN8EFJH1PCDJ*3TFH2V4IF1D 8EC7CEF172BWF4 NIREK%C-KN+JSJEU:XQ$NJMO07VBM$FW8Q:/TH7GXUU%BTMZMTKHSP5NWBZ/EOKI0*SXB1L7M$Y34IECEC7$MAWD.BO7NC.AR100000FGWZJS0MF",
@@ -100,7 +91,7 @@ class TestDataProvider {
                 }
             }
             """.data(using: .utf8)!
-            return try! jsonDecoder().decode(EuTestData.self, from: jsonData)
+            return try! jsonTestDecoder().decode(EuTestData.self, from: jsonData)
         }
     }
 }
@@ -112,7 +103,7 @@ struct TestData {
 }
 
 struct EuTestData : Decodable {
-    let jsonContent: EuHealthCert?
+    let jsonContent: HealthCert?
     let cborHex: String?
     let coseHex: String?
     let base45EncodedAndCompressed: String?

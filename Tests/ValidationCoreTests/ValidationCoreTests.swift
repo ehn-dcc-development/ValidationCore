@@ -15,9 +15,6 @@ class ValidationCoreSpec: QuickSpec {
             var validationCore : ValidationCore!
             let testDataProvider : TestDataProvider! = TestDataProvider()
             
-            beforeEach {
-            }
-            
             for testData in testDataProvider.testData {
                 it(testData.testContext.description) {
                     let dateService = TestDateService(testData)
@@ -63,6 +60,83 @@ class ValidationCoreSpec: QuickSpec {
                     expect(result.error).toEventually(beError(ValidationError.COSE_DESERIALIZATION_FAILED))
                 }
             }
+        }
+        
+        describe("Austrian Exemption Test") {
+            var validationCore: ValidationCore!
+            let testDataProvider: ExemptionTestDataProvider! = ExemptionTestDataProvider()
+            
+            it("can verify signature of valid exemption") {
+                let testData = testDataProvider.validVe
+                let dateService = TestDateService(testData)
+                let trustlistService = TestTrustlistService(testData, dateService: dateService)
+                validationCore = ValidationCore(trustlistService: trustlistService, dateService: dateService)
+                validationCore.validateExemption(encodedData: testData.prefixed!) { result in
+                    expect(result.isValid).toEventually(beTrue())
+                    expect(result.error).toEventually(beNil())
+                }
+            }
+            
+            it("does not verify invalid signature") {
+                let testData = testDataProvider.invalidSignedVe
+                let dateService = TestDateService(testData)
+                let trustlistService = TestTrustlistService(testData, dateService: dateService)
+                validationCore = ValidationCore(trustlistService: trustlistService, dateService: dateService)
+                validationCore.validateExemption(encodedData: testData.prefixed!) { result in
+                    expect(result.isValid).toEventually(beFalse())
+                    expect(result.error).toEventually(beError(.UNSUITABLE_PUBLIC_KEY_TYPE))
+                }
+            }
+            
+            it("does not verify invalid signature") {
+                let testData = testDataProvider.invalidVeWithoutKey
+                let dateService = TestDateService(testData)
+                let keyId = Data([72, 208, 143, 36, 68, 105, 165, 177, 200])
+                let trustlistService = X509TrustlistService(base64Encoded: [keyId:testData.testContext.signingCertificate!], dateService: dateService, enableValidityChecks: false)
+                validationCore = ValidationCore(trustlistService: trustlistService, dateService: dateService)
+                validationCore.validateExemption(encodedData: testData.prefixed!) { result in
+                    expect(result.isValid).toEventually(beFalse())
+                    expect(result.error).toEventually(beError(.KEY_NOT_IN_TRUST_LIST))
+                }
+            }
+            
+            context("does not deserialize") {
+                it("entries containing multiple vaccination exemptions") {
+                    let testData = testDataProvider.invalidMultipleVe
+                    let dateService = TestDateService(testData)
+                    let trustlistService = TestTrustlistService(testData, dateService: dateService)
+                    validationCore = ValidationCore(trustlistService: trustlistService, dateService: dateService)
+                    validationCore.validateExemption(encodedData: testData.prefixed!) { result in
+                        expect(result.isValid).toEventually(beFalse())
+                        expect(result.error).toEventually(beError(.CBOR_DESERIALIZATION_FAILED))
+                    }
+                }
+                
+                it("entries containing austrian vaccination exemption and vaccination/recovery/test") {
+                    let testData = testDataProvider.invalidMixedVe
+                    let dateService = TestDateService(testData)
+                    let trustlistService = TestTrustlistService(testData, dateService: dateService)
+                    validationCore = ValidationCore(trustlistService: trustlistService, dateService: dateService)
+                    validationCore.validateExemption(encodedData: testData.prefixed!) { result in
+                        expect(result.isValid).toEventually(beFalse())
+                        expect(result.error).toEventually(beError(.CBOR_DESERIALIZATION_FAILED))
+                    }
+                }
+                
+                
+                it("HC1 containing austrian vaccination exemption") {
+                    let testData = testDataProvider.invalidHc1SignedWithAtCert
+                    let dateService = TestDateService(testData)
+                    let trustlistService = TestTrustlistService(testData, dateService: dateService)
+                    validationCore = ValidationCore(trustlistService: trustlistService, dateService: dateService)
+                    validationCore.validateExemption(encodedData: testData.prefixed!) { result in
+                        expect(result.isValid).toEventually(beFalse())
+                        expect(result.error).toEventually(beError(.INVALID_SCHEME_PREFIX))
+                    }
+                }
+                
+            }
+            
         }
     }
     

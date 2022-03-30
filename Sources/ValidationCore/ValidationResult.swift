@@ -10,6 +10,6 @@ import Foundation
 public struct ValidationResult : Codable {
     public let isValid : Bool
     public let metaInformation : MetaInfo?
-    public let greenpass : EuHealthCert?
+    public let greenpass : HealthCert?
     public let error : ValidationError?
 }

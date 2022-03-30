@@ -109,7 +109,7 @@ extension UInt64 {
 }
 
 extension Optional where Wrapped : Collection {
-    var moreThanOne : Bool {
+    var oneOrMore : Bool {
         guard let this = self else {
             return false
         }

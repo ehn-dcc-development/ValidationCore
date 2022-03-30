@@ -9,13 +9,14 @@ import Foundation
 import SwiftCBOR
 
 
-public struct EuHealthCert : Codable {
+public struct HealthCert : Codable {
     public var person: Person
     public var dateOfBirth : String
     public let version: String
     public let vaccinations: [Vaccination]?
     public let recovery: [Recovery]?
     public let tests: [Test]?
+    public let vaccinationExemption : [VaccinationExemption]?
     
     public var type : CertType {
         get {
@@ -24,6 +25,8 @@ public struct EuHealthCert : Codable {
                 return .vaccination
             case _ where nil != recovery && recovery?.count ?? 0 > 0:
                 return .recovery
+            case _ where nil != vaccinationExemption && vaccinationExemption?.count ?? 0 > 0:
+                return .vaccinationExemption
             default:
                 return .test
             }
@@ -36,6 +39,7 @@ public struct EuHealthCert : Codable {
         case vaccinations = "v"
         case recovery = "r"
         case tests = "t"
+        case vaccinationExemption = "ve"
         case version = "ver"
     }
     
@@ -47,11 +51,13 @@ public struct EuHealthCert : Codable {
         self.vaccinations = try? container.decode([Vaccination].self, forKey: .vaccinations)
         self.tests = try? container.decode([Test].self, forKey: .tests)
         self.recovery = try? container.decode([Recovery].self, forKey: .recovery)
+        self.vaccinationExemption = try? container.decode([VaccinationExemption].self, forKey: .vaccinationExemption)
         
-        if (vaccinations.moreThanOne && (recovery.moreThanOne || tests.moreThanOne)) ||
-            tests.moreThanOne && (recovery.moreThanOne || vaccinations.moreThanOne) ||
-            recovery.moreThanOne && (tests.moreThanOne || vaccinations.moreThanOne) ||
-            !(vaccinations.exactlyOne || recovery.exactlyOne || tests.exactlyOne) {
+        if (vaccinations.oneOrMore && (recovery.oneOrMore || tests.oneOrMore)) ||
+            (tests.oneOrMore && (recovery.oneOrMore || vaccinations.oneOrMore)) ||
+            (recovery.oneOrMore && (tests.oneOrMore || vaccinations.oneOrMore)) ||
+            (vaccinationExemption.oneOrMore && (tests.oneOrMore || vaccinations.oneOrMore || recovery.oneOrMore)) ||
+            !(vaccinations.exactlyOne || recovery.exactlyOne || tests.exactlyOne || vaccinationExemption.exactlyOne) {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
     }
@@ -216,6 +222,34 @@ public struct Recovery : Codable {
             throw ValidationError.CBOR_DESERIALIZATION_FAILED
         }
         self.certificateIssuer = try container.decode(String.self, forKey: .certificateIssuer)
+        self.certificateIdentifier = try container.decode(String.self, forKey: .certificateIdentifier)
+    }
+}
+
+public struct VaccinationExemption : Codable {
+    public let disease : String
+    public let validUntil : String
+    public let country : String
+    public let issuer : String
+    public let certificateIdentifier : String
+    
+    private enum CodingKeys : String, CodingKey {
+        case disease = "tg"
+        case validUntil = "du"
+        case country = "co"
+        case issuer = "is"
+        case certificateIdentifier = "ci"
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.disease = try container.decode(String.self, forKey: .disease)
+        self.validUntil = try container.decode(String.self, forKey: .validUntil)
+        guard validUntil.isValidIso8601Date() else {
+            throw ValidationError.CBOR_DESERIALIZATION_FAILED
+        }
+        self.country = try container.decode(String.self, forKey: .country)
+        self.issuer = try container.decode(String.self, forKey: .issuer)
         self.certificateIdentifier = try container.decode(String.self, forKey: .certificateIdentifier)
     }
 }
