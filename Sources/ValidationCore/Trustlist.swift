@@ -66,7 +66,7 @@ public struct TrustEntry : Codable {
             case .recovery:
                 return nil != certificate.extensionObject(oid: OID_RECOVERY) || nil != certificate.extensionObject(oid: OID_ALT_RECOVERY)
             case .vaccinationExemption:
-                return false //TODO check if there exists a oic for exemptions
+                return false 
             }
         }
         DDLogDebug("Using trustlist certificate \(self.cert.base64EncodedString()) for validation")
